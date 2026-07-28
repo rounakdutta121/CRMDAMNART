@@ -1,9 +1,15 @@
+import { config } from "dotenv";
 import { ensureIndexes } from "../src/lib/indexes";
 import { COLLECTIONS } from "../src/lib/constants";
 import { getDb, getMongoClient } from "../src/lib/mongodb";
 
 async function main() {
+  config({ path: ".env", override: true });
+
   console.log("Auditing DamnArt CRM indexes…");
+  console.log(
+    `Database target: ${process.env.MONGODB_DB} (${(process.env.MONGODB_URI ?? "").startsWith("mongodb+srv") ? "Atlas" : "other"})`
+  );
   await ensureIndexes();
   console.log("Indexes ensured.");
 
@@ -20,6 +26,9 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error("Failed to create indexes:", error instanceof Error ? error.message : error);
+  console.error(
+    "Failed to create indexes:",
+    error instanceof Error ? error.message : error
+  );
   process.exit(1);
 });

@@ -29,6 +29,24 @@ export default function LoginPage() {
   function onSubmit(values: LoginInput) {
     setError(null);
     startTransition(async () => {
+      try {
+        const healthResponse = await fetch("/api/health", { cache: "no-store" });
+        const health = (await healthResponse.json()) as {
+          database?: string;
+        };
+        if (health.database !== "connected") {
+          setError(
+            "Sign-in is temporarily unavailable because the database is disconnected. Check MongoDB Atlas network access and Vercel environment variables."
+          );
+          return;
+        }
+      } catch {
+        setError(
+          "Sign-in is temporarily unavailable. The application could not reach its health check."
+        );
+        return;
+      }
+
       const result = await signIn("credentials", {
         email: values.email,
         password: values.password,

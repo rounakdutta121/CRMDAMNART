@@ -10,6 +10,7 @@ import {
   findUserByNormalizedEmail,
   listAssignableUsers,
   listUsers,
+  updateUserPassword,
 } from "@/repositories/users.repository";
 import type { SafeCRMUser, UserRole } from "@/types/auth";
 
@@ -17,14 +18,27 @@ export async function ensureAdminUser(options: {
   name: string;
   email: string;
   password: string;
-}): Promise<{ created: boolean; user: SafeCRMUser }> {
+  resetPassword?: boolean;
+}): Promise<{ created: boolean; reset: boolean; user: SafeCRMUser }> {
   const normalizedEmail = normalizeEmail(options.email);
   const existing = await findUserByNormalizedEmail(normalizedEmail);
 
   if (existing) {
+    if (options.resetPassword) {
+      const passwordHash = await hashPassword(options.password);
+      await updateUserPassword(existing._id.toHexString(), passwordHash);
+      const refreshed = await findUserByNormalizedEmail(normalizedEmail);
+      if (!refreshed) {
+        throw new Error("Administrator not found after password reset.");
+      }
+      const { passwordHash: _, ...safe } = refreshed;
+      void _;
+      return { created: false, reset: true, user: safe };
+    }
+
     const { passwordHash: _, ...safe } = existing;
     void _;
-    return { created: false, user: safe };
+    return { created: false, reset: false, user: safe };
   }
 
   const passwordHash = await hashPassword(options.password);
@@ -45,7 +59,7 @@ export async function ensureAdminUser(options: {
     updatedAt: now,
   });
 
-  return { created: true, user };
+  return { created: true, reset: false, user };
 }
 
 export async function getUsersForSettings(): Promise<SafeCRMUser[]> {

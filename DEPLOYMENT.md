@@ -149,11 +149,32 @@ Never use `NEXT_PUBLIC_` for secrets.
 
 | Symptom | Likely cause |
 |---------|----------------|
+| `/api/health` shows `database: disconnected` | Atlas **Network Access** blocks Vercel, or `MONGODB_URI` / `MONGODB_DB` missing/wrong in Vercel |
+| Login always says invalid email/password | Usually the DB is disconnected (same as above). After DB is fixed, wrong password or admin never seeded |
+| Admin password from `.env` does not work | Seed does **not** overwrite existing admins unless `RESET_ADMIN_PASSWORD=true` |
 | Build fails on missing env | Add required vars in Vercel → Settings → Environment Variables, then redeploy |
-| Health shows disconnected | Wrong `MONGODB_URI` / `MONGODB_DB`, or Atlas network blocked |
-| Login redirect loops | `AUTH_URL` / `APP_URL` mismatch with the live domain |
-| Cookies fail on HTTPS | Ensure production deploy (`secure` cookies); `AUTH_TRUST_HOST=true` |
+| Login redirect loops | `AUTH_URL` / `APP_URL` must be `https://crmdamnart.vercel.app` (or your custom domain) |
+| Cookies fail on HTTPS | Ensure production deploy; `AUTH_TRUST_HOST=true` |
 | Webhooks 401 | API key not regenerated / wrong `x-api-key` header |
+
+### Fix database disconnected (most common production login failure)
+
+1. Open [MongoDB Atlas](https://cloud.mongodb.com) → **Network Access**.
+2. Add IP address **`0.0.0.0/0`** (Allow access from anywhere) — required for Vercel serverless IPs.
+3. Confirm Vercel env vars include the same `MONGODB_URI` and `MONGODB_DB` used locally.
+4. Redeploy on Vercel (or wait ~1 minute after Atlas IP change).
+5. Check `https://your-domain/api/health` until `"database":"connected"`.
+
+### Reset administrator password
+
+Locally (against the same Atlas DB Vercel uses):
+
+```bash
+# In .env set SEED_ADMIN_EMAIL + SEED_ADMIN_PASSWORD to the desired login
+RESET_ADMIN_PASSWORD=true npm run seed
+```
+
+Then sign in on production with that email/password.
 
 Health check (no auth):
 

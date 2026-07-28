@@ -61,53 +61,58 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const normalized = normalizeEmail(email);
 
-        const blocked = await checkLoginBlocked(normalized);
-        if (blocked.blocked) {
-          return null;
-        }
-
-        const user = await findUserByNormalizedEmail(normalized);
-
-        if (!user || !user.isActive) {
-          await recordLoginFailure(normalized);
-          return null;
-        }
-
-        const valid = await verifyPassword(password, user.passwordHash);
-        if (!valid) {
-          await recordLoginFailure(normalized);
-          return null;
-        }
-
-        await clearLoginAttempts(normalized);
-
         try {
-          await writeAuditLog({
-            actingUserId: user._id.toHexString(),
-            action: "user.login",
-            entityType: "user",
-            entityId: user._id,
-          });
-        } catch (error) {
-          logger.error("[auth] Failed to write login audit log", error);
-        }
+          const blocked = await checkLoginBlocked(normalized);
+          if (blocked.blocked) {
+            return null;
+          }
 
-        return {
-          id: user._id.toHexString(),
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          permittedWebsiteIds: user.permittedWebsiteIds.map((id) =>
-            id.toHexString()
-          ),
-          canReceiveLeadAssignments:
-            user.canReceiveLeadAssignments ??
-            defaultCanReceiveLeadAssignments(user.role),
-          canViewUnassignedLeads:
-            user.canViewUnassignedLeads ??
-            defaultCanViewUnassignedLeads(user.role),
-          sessionVersion: user.sessionVersion ?? 1,
-        };
+          const user = await findUserByNormalizedEmail(normalized);
+
+          if (!user || !user.isActive) {
+            await recordLoginFailure(normalized);
+            return null;
+          }
+
+          const valid = await verifyPassword(password, user.passwordHash);
+          if (!valid) {
+            await recordLoginFailure(normalized);
+            return null;
+          }
+
+          await clearLoginAttempts(normalized);
+
+          try {
+            await writeAuditLog({
+              actingUserId: user._id.toHexString(),
+              action: "user.login",
+              entityType: "user",
+              entityId: user._id,
+            });
+          } catch (error) {
+            logger.error("[auth] Failed to write login audit log", error);
+          }
+
+          return {
+            id: user._id.toHexString(),
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            permittedWebsiteIds: user.permittedWebsiteIds.map((id) =>
+              id.toHexString()
+            ),
+            canReceiveLeadAssignments:
+              user.canReceiveLeadAssignments ??
+              defaultCanReceiveLeadAssignments(user.role),
+            canViewUnassignedLeads:
+              user.canViewUnassignedLeads ??
+              defaultCanViewUnassignedLeads(user.role),
+            sessionVersion: user.sessionVersion ?? 1,
+          };
+        } catch (error) {
+          logger.error("[auth] Login failed due to server/database error", error);
+          return null;
+        }
       },
     }),
   ],
