@@ -58,6 +58,10 @@ export function canEditLeads(role: UserRole): boolean {
   );
 }
 
+export function canDeleteLeads(role: UserRole): boolean {
+  return role === "super_admin" || role === "admin";
+}
+
 export function canEditContacts(role: UserRole): boolean {
   return canEditLeads(role);
 }

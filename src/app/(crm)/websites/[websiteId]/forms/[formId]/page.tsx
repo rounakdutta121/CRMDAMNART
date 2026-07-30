@@ -6,6 +6,8 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DeleteEntityButton } from "@/components/shared/delete-entity-button";
+import { deleteFormAction } from "@/app/actions";
 import { requireSession } from "@/lib/auth";
 import { canManageForms } from "@/lib/permissions";
 import {
@@ -82,6 +84,14 @@ export default async function WebsiteFormDetailPage({
                   Test submission
                 </Link>
               </Button>
+              {form.isActive ? (
+                <DeleteEntityButton
+                  label="Delete form"
+                  confirmMessage={`Delete form "${form.name}"? It will be deactivated and stop accepting submissions.`}
+                  redirectTo={`/websites/${websiteId}/forms`}
+                  action={deleteFormAction.bind(null, websiteId, formId)}
+                />
+              ) : null}
             </>
           ) : null}
         </div>

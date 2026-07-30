@@ -284,7 +284,7 @@ export async function deactivateFormForUser(
   formId: string
 ): Promise<void> {
   if (!canManageForms(user.role)) {
-    throw new PermissionError("You are not allowed to deactivate forms.");
+    throw new PermissionError("You are not allowed to delete forms.");
   }
 
   const existing = await findFormById(formId);
@@ -293,15 +293,20 @@ export async function deactivateFormForUser(
   }
 
   assertCanAccessWebsite(user, existing.websiteId.toHexString());
+
+  if (!existing.isActive) {
+    return;
+  }
+
   await deleteForm(formId);
 
   await writeAuditLog({
     actingUserId: user.id,
-    action: "form.deactivated",
+    action: "form.deleted",
     entityType: "integration",
     entityId: formId,
     websiteId: existing.websiteId.toHexString(),
-    previousValues: { isActive: existing.isActive },
+    previousValues: { isActive: existing.isActive, name: existing.name },
     newValues: { isActive: false },
   });
 }

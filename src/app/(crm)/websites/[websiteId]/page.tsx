@@ -10,6 +10,8 @@ import { requireSession } from "@/lib/auth";
 import { canManageWebsites } from "@/lib/permissions";
 import { getWebsiteForUser } from "@/services/websites.service";
 import { RegenerateApiKeyButton } from "@/components/websites/regenerate-api-key-button";
+import { DeleteEntityButton } from "@/components/shared/delete-entity-button";
+import { deleteWebsiteAction } from "@/app/actions";
 
 export default async function WebsiteDetailPage({
   params,
@@ -55,6 +57,14 @@ export default async function WebsiteDetailPage({
             <Button asChild variant="outline">
               <Link href={`/websites/${websiteId}/forms`}>Manage forms</Link>
             </Button>
+            {website.isActive ? (
+              <DeleteEntityButton
+                label="Delete website"
+                confirmMessage={`Delete website "${website.name}"? It will be deactivated and stop accepting webhook leads.`}
+                redirectTo="/websites"
+                action={deleteWebsiteAction.bind(null, websiteId)}
+              />
+            ) : null}
           </div>
         ) : (
           <Button asChild variant="outline">

@@ -17,6 +17,7 @@ import {
   canChangeFulfilmentStatus,
   canChangeSalesStatus,
   canCreateManualLeads,
+  canDeleteLeads,
   canEditLeads,
   canPerformBulkActions,
   canViewAllLeadsInWebsite,
@@ -48,6 +49,8 @@ import { findContactById, findDuplicateContacts } from "@/repositories/contacts.
 import {
   bulkUpdateLeads,
   createLead,
+  deleteLeadById,
+  deleteLeadRelatedRecords,
   findLeadById,
   listLeads,
   updateLead,
@@ -1177,4 +1180,39 @@ export async function bulkUpdateLeadsForUser(
   });
 
   return { updated };
+}
+
+export async function deleteLeadForUser(
+  user: SessionUser,
+  leadId: string
+): Promise<void> {
+  if (!canDeleteLeads(user.role)) {
+    throw new PermissionError("You are not allowed to delete leads.");
+  }
+
+  const lead = await findLeadById(leadId);
+  if (!lead) {
+    throw new Error("Lead not found.");
+  }
+
+  assertCanAccessWebsite(user, lead.websiteId.toHexString());
+
+  await deleteLeadRelatedRecords(leadId);
+  const deleted = await deleteLeadById(leadId);
+  if (!deleted) {
+    throw new Error("Lead not found.");
+  }
+
+  await writeAuditLog({
+    actingUserId: user.id,
+    action: "lead.deleted",
+    entityType: "lead",
+    entityId: leadId,
+    websiteId: lead.websiteId.toHexString(),
+    previousValues: {
+      leadNumber: lead.leadNumber,
+      formCode: lead.formCode,
+      salesStatus: lead.salesStatus,
+    },
+  });
 }

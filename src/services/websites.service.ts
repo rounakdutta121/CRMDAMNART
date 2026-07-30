@@ -191,6 +191,40 @@ export async function updateWebsiteForUser(
   return toSafeWebsite(updated);
 }
 
+export async function deleteWebsiteForUser(
+  user: SessionUser,
+  websiteId: string
+): Promise<void> {
+  if (!canManageWebsites(user.role)) {
+    throw new PermissionError("You are not allowed to delete websites.");
+  }
+
+  if (!canAccessWebsite(user, websiteId) && user.role !== "super_admin") {
+    throw new PermissionError("You do not have access to this website.");
+  }
+
+  const existing = await findWebsiteById(websiteId);
+  if (!existing) {
+    throw new Error("Website not found.");
+  }
+
+  if (!existing.isActive) {
+    return;
+  }
+
+  await updateWebsite(websiteId, { isActive: false });
+
+  await writeAuditLog({
+    actingUserId: user.id,
+    action: "website.deleted",
+    entityType: "website",
+    entityId: websiteId,
+    websiteId,
+    previousValues: { isActive: existing.isActive, name: existing.name },
+    newValues: { isActive: false },
+  });
+}
+
 export async function regenerateApiKeyForUser(
   user: SessionUser,
   websiteId: string

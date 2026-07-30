@@ -14,14 +14,17 @@ import { CommunicationLogForm } from "@/components/leads/communication-log-form"
 import { LeadActionsPanel } from "@/components/leads/lead-actions-panel";
 import { LeadFormDataSection } from "@/components/leads/lead-form-data-section";
 import { PossibleDuplicatesSection } from "@/components/leads/possible-duplicates-section";
+import { DeleteEntityButton } from "@/components/shared/delete-entity-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { deleteLeadAction } from "@/app/actions";
 import { requireSession } from "@/lib/auth";
 import {
   canAddNotes,
   canAssignLeads,
   canChangeFulfilmentStatus,
   canChangeSalesStatus,
+  canDeleteLeads,
   canEditContacts,
   canEditLeads,
   canMergeContacts,
@@ -205,9 +208,19 @@ export default async function LeadDetailPage({
           reference={lead.leadNumber}
           className="mb-0 flex-1 border-0 pb-0"
         />
-        <Button asChild variant="outline">
-          <Link href={`/leads/${leadId}/edit`}>Edit page</Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline">
+            <Link href={`/leads/${leadId}/edit`}>Edit page</Link>
+          </Button>
+          {canDeleteLeads(user.role) ? (
+            <DeleteEntityButton
+              label="Delete lead"
+              confirmMessage={`Permanently delete lead ${lead.leadNumber}? This cannot be undone.`}
+              redirectTo="/leads"
+              action={deleteLeadAction.bind(null, leadId)}
+            />
+          ) : null}
+        </div>
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2">

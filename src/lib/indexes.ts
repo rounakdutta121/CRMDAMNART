@@ -42,6 +42,20 @@ export async function ensureIndexes(): Promise<void> {
     { key: { searchName: 1 }, name: "contacts_searchName" },
   ]);
 
+  // Clean up documents that stored explicit null (breaks sparse unique indexes).
+  await db.collection(COLLECTIONS.leads).updateMany(
+    { externalSubmissionId: null },
+    { $unset: { externalSubmissionId: "" } }
+  );
+
+  try {
+    await db
+      .collection(COLLECTIONS.leads)
+      .dropIndex("leads_websiteId_externalSubmissionId_unique_sparse");
+  } catch {
+    // Index may already be absent on fresh databases.
+  }
+
   await db.collection(COLLECTIONS.leads).createIndexes([
     { key: { leadNumber: 1 }, unique: true, name: "leads_leadNumber_unique" },
     { key: { websiteId: 1, createdAt: -1 }, name: "leads_websiteId_createdAt" },
@@ -63,8 +77,11 @@ export async function ensureIndexes(): Promise<void> {
     {
       key: { websiteId: 1, externalSubmissionId: 1 },
       unique: true,
-      sparse: true,
-      name: "leads_websiteId_externalSubmissionId_unique_sparse",
+      // Sparse treats explicit null as indexed; only real string IDs must be unique.
+      partialFilterExpression: {
+        externalSubmissionId: { $type: "string" },
+      },
+      name: "leads_websiteId_externalSubmissionId_unique_partial",
     },
     {
       key: { websiteId: 1, formId: 1, createdAt: -1 },

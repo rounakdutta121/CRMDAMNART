@@ -32,6 +32,7 @@ import {
 } from "@/lib/validation/user.schema";
 import {
   createWebsiteForUser,
+  deleteWebsiteForUser,
   regenerateApiKeyForUser,
   updateWebsiteForUser,
 } from "@/services/websites.service";
@@ -39,6 +40,7 @@ import {
   addNoteToLead,
   createManualLead,
   createManualLeadFromForm,
+  deleteLeadForUser,
   logContactAttempt,
   scheduleFollowUpForLead,
   updateLeadForUser,
@@ -56,6 +58,7 @@ import { importLeadsFromMappedRows } from "@/services/import-leads.service";
 import { mergeContactsForUser } from "@/services/contacts.service";
 import {
   createFormForUser,
+  deactivateFormForUser,
   testFormSubmissionForUser,
   updateFormForUser,
 } from "@/services/forms.service";
@@ -229,6 +232,32 @@ export async function regenerateApiKeyAction(
       message: "API key regenerated. Copy it now — it will not be shown again.",
       data: { apiKey: result.apiKey },
     };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
+export async function deleteWebsiteAction(
+  websiteId: string
+): Promise<ActionResult> {
+  try {
+    const user = await requireSession();
+    await deleteWebsiteForUser(user, websiteId);
+    revalidatePath("/websites");
+    revalidatePath(`/websites/${websiteId}`);
+    return { success: true, message: "Website deleted." };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
+export async function deleteLeadAction(leadId: string): Promise<ActionResult> {
+  try {
+    const user = await requireSession();
+    await deleteLeadForUser(user, leadId);
+    revalidatePath("/leads");
+    revalidatePath(`/leads/${leadId}`);
+    return { success: true, message: "Lead deleted." };
   } catch (error) {
     return toActionError(error);
   }
@@ -799,6 +828,21 @@ export async function updateFormAction(
     revalidatePath(`/websites/${websiteId}/forms/${formId}`);
     revalidatePath(`/websites/${websiteId}/forms/${formId}/edit`);
     return { success: true, message: "Form updated." };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
+export async function deleteFormAction(
+  websiteId: string,
+  formId: string
+): Promise<ActionResult> {
+  try {
+    const user = await requireSession();
+    await deactivateFormForUser(user, formId);
+    revalidatePath(`/websites/${websiteId}/forms`);
+    revalidatePath(`/websites/${websiteId}/forms/${formId}`);
+    return { success: true, message: "Form deleted." };
   } catch (error) {
     return toActionError(error);
   }

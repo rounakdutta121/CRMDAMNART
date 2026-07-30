@@ -178,8 +178,37 @@ export async function createLead(data: Omit<Lead, "_id">): Promise<Lead> {
   const db = await getDb();
   const _id = new ObjectId();
   const doc: Lead = { ...data, _id };
+  // Omit empty externalSubmissionId so unique partial indexes stay usable.
+  if (doc.externalSubmissionId == null || doc.externalSubmissionId === "") {
+    delete doc.externalSubmissionId;
+  }
   await db.collection<Lead>(COLLECTIONS.leads).insertOne(doc);
   return doc;
+}
+
+export async function deleteLeadById(id: string): Promise<boolean> {
+  const db = await getDb();
+  const leadId = new ObjectId(id);
+  const result = await db.collection<Lead>(COLLECTIONS.leads).deleteOne({
+    _id: leadId,
+  });
+  return result.deletedCount === 1;
+}
+
+export async function deleteLeadRelatedRecords(leadId: string): Promise<void> {
+  const db = await getDb();
+  const id = new ObjectId(leadId);
+
+  await Promise.all([
+    db.collection(COLLECTIONS.leadActivities).deleteMany({ leadId: id }),
+    db.collection(COLLECTIONS.leadAttributions).deleteMany({ leadId: id }),
+    db.collection(COLLECTIONS.followUps).deleteMany({ leadId: id }),
+    db
+      .collection(COLLECTIONS.leadAssignmentHistory)
+      .deleteMany({ leadId: id }),
+    db.collection(COLLECTIONS.conversionEvents).deleteMany({ leadId: id }),
+    db.collection(COLLECTIONS.webhookIdempotency).deleteMany({ leadId: id }),
+  ]);
 }
 
 export async function updateLead(
