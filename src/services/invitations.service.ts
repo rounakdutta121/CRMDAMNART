@@ -61,6 +61,12 @@ export async function createInvitationForAdmin(
     throw new PermissionError("You are not allowed to create invitations.");
   }
 
+  if (input.role === "super_admin" && user.role !== "super_admin") {
+    throw new PermissionError(
+      "Only a super admin can invite another super admin."
+    );
+  }
+
   const normalizedEmail = normalizeEmail(input.email);
   const existingUser = await findUserByNormalizedEmail(normalizedEmail);
   if (existingUser) {

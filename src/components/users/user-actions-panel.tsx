@@ -19,10 +19,12 @@ export function UserActionsPanel({
   userId,
   isActive,
   canDeactivate,
+  canResetPassword = true,
 }: {
   userId: string;
   isActive: boolean;
   canDeactivate: boolean;
+  canResetPassword?: boolean;
 }) {
   const resetAction = resetPasswordAction.bind(null, userId);
   const [resetState, resetFormAction, resetPending] = useActionState(
@@ -49,35 +51,37 @@ export function UserActionsPanel({
   return (
     <div className="space-y-4">
       <GlobalLoadingSync pending={resetPending || deactivatePending} />
-      <Card>
-        <CardHeader>
-          <CardTitle>Reset password</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form action={resetFormAction} className="space-y-3">
-            <div className="space-y-2">
-              <Label htmlFor="password">New password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                required
-                minLength={8}
-              />
-            </div>
-            {resetState?.message ? (
-              <p
-                className={`text-sm ${resetState.success ? "text-emerald-600" : "text-[var(--danger)]"}`}
-              >
-                {resetState.message}
-              </p>
-            ) : null}
-            <Button type="submit" variant="outline" disabled={resetPending}>
-              {resetPending ? "Resetting…" : "Reset password"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+      {canResetPassword ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Reset password</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form action={resetFormAction} className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="password">New password</Label>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  required
+                  minLength={8}
+                />
+              </div>
+              {resetState?.message ? (
+                <p
+                  className={`text-sm ${resetState.success ? "text-emerald-600" : "text-[var(--danger)]"}`}
+                >
+                  {resetState.message}
+                </p>
+              ) : null}
+              <Button type="submit" variant="outline" disabled={resetPending}>
+                {resetPending ? "Resetting…" : "Reset password"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {isActive && canDeactivate ? (
         <Card>

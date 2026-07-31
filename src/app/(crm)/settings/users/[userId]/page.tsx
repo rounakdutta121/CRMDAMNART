@@ -73,9 +73,12 @@ export default async function UserDetailPage({
           title={targetUser.name}
           description={targetUser.email}
         />
-        <Button asChild variant="outline">
-          <Link href={`/settings/users/${userId}/edit`}>Edit user</Link>
-        </Button>
+        {sessionUser.role === "super_admin" ||
+        targetUser.role !== "super_admin" ? (
+          <Button asChild variant="outline">
+            <Link href={`/settings/users/${userId}/edit`}>Edit user</Link>
+          </Button>
+        ) : null}
       </div>
 
       <div className="mb-4">
@@ -111,7 +114,15 @@ export default async function UserDetailPage({
         <UserActionsPanel
           userId={userId}
           isActive={targetUser.isActive}
-          canDeactivate={sessionUser.id !== userId}
+          canDeactivate={
+            sessionUser.id !== userId &&
+            (sessionUser.role === "super_admin" ||
+              targetUser.role !== "super_admin")
+          }
+          canResetPassword={
+            sessionUser.role === "super_admin" ||
+            targetUser.role !== "super_admin"
+          }
         />
       </div>
     </div>

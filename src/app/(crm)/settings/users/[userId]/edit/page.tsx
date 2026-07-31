@@ -26,6 +26,13 @@ export default async function EditUserPage({
     notFound();
   }
 
+  if (
+    targetUser.role === "super_admin" &&
+    sessionUser.role !== "super_admin"
+  ) {
+    redirect(`/settings/users/${userId}`);
+  }
+
   const websites = await getAccessibleWebsites(sessionUser);
   const assignableRoles: UserRole[] =
     sessionUser.role === "super_admin"

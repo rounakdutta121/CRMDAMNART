@@ -64,6 +64,12 @@ export async function createUserForAdmin(
     throw new PermissionError("You are not allowed to create users.");
   }
 
+  if (input.role === "super_admin" && user.role !== "super_admin") {
+    throw new PermissionError(
+      "Only a super admin can assign the super admin role."
+    );
+  }
+
   const normalizedEmail = normalizeEmail(input.email);
   const existing = await findUserByNormalizedEmail(normalizedEmail);
   if (existing) {
@@ -122,6 +128,17 @@ export async function updateUserForAdmin(
     throw new Error("User not found.");
   }
 
+  assertCanManageTargetUser(user, existing);
+
+  if (
+    input.role === "super_admin" &&
+    user.role !== "super_admin"
+  ) {
+    throw new PermissionError(
+      "Only a super admin can assign the super admin role."
+    );
+  }
+
   const update: Parameters<typeof updateUser>[1] = {};
 
   if (input.name !== undefined) {
@@ -149,6 +166,9 @@ export async function updateUserForAdmin(
   }
 
   if (input.isActive !== undefined) {
+    if (input.isActive === false) {
+      assertCanDeactivateTargetUser(user, existing);
+    }
     update.isActive = input.isActive;
   }
 
@@ -200,6 +220,8 @@ export async function resetPasswordForAdmin(
     throw new Error("User not found.");
   }
 
+  assertCanManageTargetUser(user, existing);
+
   const passwordHash = await hashPassword(input.password);
   await updateUserPassword(userId, passwordHash);
 
@@ -228,6 +250,8 @@ export async function deactivateUserForAdmin(
     throw new Error("User not found.");
   }
 
+  assertCanDeactivateTargetUser(user, existing);
+
   if (!existing.isActive) {
     const { passwordHash: _, ...safe } = existing;
     void _;
@@ -254,6 +278,24 @@ export async function deactivateUserForAdmin(
   const { passwordHash: _, ...safe } = refreshed;
   void _;
   return safe;
+}
+
+function assertCanManageTargetUser(
+  actor: SessionUser,
+  target: { role: UserRole }
+): void {
+  if (target.role === "super_admin" && actor.role !== "super_admin") {
+    throw new PermissionError(
+      "Admins cannot modify, deactivate, or delete a super admin account."
+    );
+  }
+}
+
+function assertCanDeactivateTargetUser(
+  actor: SessionUser,
+  target: { role: UserRole }
+): void {
+  assertCanManageTargetUser(actor, target);
 }
 
 export async function transferLeadsForAdmin(
