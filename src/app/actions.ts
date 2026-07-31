@@ -1406,6 +1406,26 @@ export async function revokeDashboardShareAction(
   }
 }
 
+export async function deleteDashboardShareAction(
+  shareId: string
+): Promise<ActionResult> {
+  try {
+    const user = await requireSession();
+    const { deleteShareForWebsite } = await import(
+      "@/services/dashboard-shares.service"
+    );
+    const { websiteId } = await deleteShareForWebsite(user, shareId);
+    revalidatePath(`/websites/${websiteId}/performance/shares`);
+    return {
+      success: true,
+      message: "Dashboard share deleted.",
+      data: { websiteId },
+    };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
 export async function regenerateDashboardShareSlugAction(
   shareId: string
 ): Promise<ActionResult> {
@@ -1414,8 +1434,9 @@ export async function regenerateDashboardShareSlugAction(
     const { regenerateShareSlugForWebsite } = await import(
       "@/services/dashboard-shares.service"
     );
+    const { getAppUrl } = await import("@/lib/env");
     const share = await regenerateShareSlugForWebsite(user, shareId);
-    const appUrl = process.env.APP_URL ?? process.env.AUTH_URL ?? "http://localhost:3000";
+    const appUrl = getAppUrl();
     return {
       success: true,
       message: "Share link regenerated.",

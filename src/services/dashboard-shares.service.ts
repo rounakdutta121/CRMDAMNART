@@ -11,7 +11,9 @@ import {
 import {
   assertCanAccessWebsite,
   canCreateDashboardShare,
+  canDeleteDashboardShare,
   canEditDashboardShare,
+  canManageDashboardShareRecord,
   canRevokeDashboardShare,
   canViewDashboardAccessLogs,
   PermissionError,
@@ -28,6 +30,7 @@ import type {
 import {
   createDashboardAccessLog,
   createDashboardShare,
+  deleteDashboardShare,
   findDashboardShareById,
   findDashboardShareBySlug,
   incrementDashboardShareViewCount,
@@ -38,16 +41,18 @@ import {
   toSafeDashboardShare,
   updateDashboardShare,
 } from "@/repositories/dashboard-shares.repository";
+import { findUserById } from "@/repositories/users.repository";
 import { findWebsiteById } from "@/repositories/websites.repository";
 import {
   getWebsitePerformanceAggregate,
   type WebsitePerformanceAggregate,
 } from "@/services/website-performance.service";
-import type { SessionUser } from "@/types/auth";
+import type { SessionUser, UserRole } from "@/types/auth";
 import type {
   DashboardAccessStatus,
   DashboardPeriodPreset,
   SafeDashboardShare,
+  DashboardShare,
 } from "@/types/dashboard-share";
 
 const MAX_PASSWORD_ATTEMPTS = 5;
@@ -204,6 +209,7 @@ export async function updateShareForWebsite(
     if (!canRevokeDashboardShare(user.role)) {
       throw new PermissionError("You are not allowed to revoke dashboard shares.");
     }
+    await assertCanManageShareRecord(user, existing);
     update.status = "revoked";
   }
   if (input.access !== undefined) {
@@ -286,6 +292,7 @@ export async function revokeShareForWebsite(
   if (!canRevokeDashboardShare(user.role)) {
     throw new PermissionError("You are not allowed to revoke dashboard shares.");
   }
+  await assertCanManageShareRecord(user, existing);
 
   await updateDashboardShare(shareId, { status: "revoked" });
 
@@ -296,6 +303,70 @@ export async function revokeShareForWebsite(
     entityId: shareId,
     websiteId: existing.websiteId.toHexString(),
   });
+}
+
+export async function deleteShareForWebsite(
+  user: SessionUser,
+  shareId: string
+): Promise<{ websiteId: string }> {
+  const existing = await findDashboardShareById(shareId);
+  if (!existing) {
+    throw new Error("Dashboard share not found.");
+  }
+  assertCanAccessWebsite(user, existing.websiteId.toHexString());
+  if (!canDeleteDashboardShare(user.role)) {
+    throw new PermissionError("You are not allowed to delete dashboard shares.");
+  }
+  await assertCanManageShareRecord(user, existing);
+
+  if (existing.status !== "revoked") {
+    throw new Error("Revoke the share before deleting it.");
+  }
+
+  const websiteId = existing.websiteId.toHexString();
+  await deleteDashboardShare(shareId);
+
+  await writeAuditLog({
+    actingUserId: user.id,
+    action: "dashboard_share.deleted",
+    entityType: "dashboard_share",
+    entityId: shareId,
+    websiteId,
+    previousValues: {
+      name: existing.name,
+      shareSlug: existing.shareSlug,
+      status: existing.status,
+    },
+  });
+
+  return { websiteId };
+}
+
+export async function canUserManageShare(
+  user: SessionUser,
+  share: Pick<DashboardShare, "createdByUserId">
+): Promise<boolean> {
+  if (!canRevokeDashboardShare(user.role) && !canDeleteDashboardShare(user.role)) {
+    return false;
+  }
+  const creator = await findUserById(share.createdByUserId.toHexString());
+  return canManageDashboardShareRecord(
+    user,
+    share,
+    (creator?.role as UserRole | undefined) ?? null
+  );
+}
+
+async function assertCanManageShareRecord(
+  user: SessionUser,
+  share: Pick<DashboardShare, "createdByUserId">
+): Promise<void> {
+  const allowed = await canUserManageShare(user, share);
+  if (!allowed) {
+    throw new PermissionError(
+      "You can only revoke or delete your own shares and shares created by people below your role."
+    );
+  }
 }
 
 export async function getShareAccessLogsForAdmin(

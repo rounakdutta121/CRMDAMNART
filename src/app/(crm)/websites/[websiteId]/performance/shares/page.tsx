@@ -5,6 +5,7 @@ import { CopyButton } from "@/components/shared/copy-button";
 import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { requireSession } from "@/lib/auth";
+import { getAppUrl } from "@/lib/env";
 import { canCreateDashboardShare } from "@/lib/permissions";
 import { listSharesForWebsite } from "@/services/dashboard-shares.service";
 import { getWebsiteForUser } from "@/services/websites.service";
@@ -23,7 +24,7 @@ export default async function DashboardSharesPage({
   const { websiteId } = await params;
   const website = await getWebsiteForUser(user, websiteId);
   const shares = await listSharesForWebsite(user, websiteId);
-  const appUrl = process.env.APP_URL ?? process.env.AUTH_URL ?? "http://localhost:3000";
+  const appUrl = getAppUrl();
 
   return (
     <div>

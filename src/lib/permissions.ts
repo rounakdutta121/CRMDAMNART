@@ -226,6 +226,60 @@ export function canRevokeDashboardShare(role: UserRole): boolean {
   return role === "super_admin" || role === "admin";
 }
 
+export function canDeleteDashboardShare(role: UserRole): boolean {
+  return role === "super_admin" || role === "admin";
+}
+
+/** Higher number = higher privilege. Used for "people below" checks. */
+const ROLE_RANK: Record<UserRole, number> = {
+  super_admin: 100,
+  admin: 80,
+  sales_manager: 60,
+  sales_executive: 40,
+  operations: 40,
+  marketing: 40,
+  viewer: 20,
+};
+
+export function isRoleStrictlyBelow(
+  actorRole: UserRole,
+  targetRole: UserRole
+): boolean {
+  return ROLE_RANK[targetRole] < ROLE_RANK[actorRole];
+}
+
+/**
+ * Super admin: any share.
+ * Admin: own shares, or shares created by a role strictly below admin.
+ */
+export function canManageDashboardShareRecord(
+  actor: Pick<SessionUser, "id" | "role">,
+  share: { createdByUserId: { toHexString(): string } | string },
+  creatorRole: UserRole | null | undefined
+): boolean {
+  if (actor.role === "super_admin") {
+    return true;
+  }
+  if (actor.role !== "admin") {
+    return false;
+  }
+
+  const creatorId =
+    typeof share.createdByUserId === "string"
+      ? share.createdByUserId
+      : share.createdByUserId.toHexString();
+
+  if (creatorId === actor.id) {
+    return true;
+  }
+
+  if (!creatorRole) {
+    return false;
+  }
+
+  return isRoleStrictlyBelow(actor.role, creatorRole);
+}
+
 export function canViewDashboardAccessLogs(role: UserRole): boolean {
   return role === "super_admin" || role === "admin";
 }

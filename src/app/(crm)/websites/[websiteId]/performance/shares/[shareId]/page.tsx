@@ -7,8 +7,12 @@ import { PageHeader } from "@/components/shared/page-header";
 import { ShareAdminActions } from "@/components/performance/share-admin-actions";
 import { Button } from "@/components/ui/button";
 import { requireSession } from "@/lib/auth";
+import { getAppUrl } from "@/lib/env";
 import { canCreateDashboardShare } from "@/lib/permissions";
-import { getShareForAdmin } from "@/services/dashboard-shares.service";
+import {
+  canUserManageShare,
+  getShareForAdmin,
+} from "@/services/dashboard-shares.service";
 import { getWebsiteForUser } from "@/services/websites.service";
 
 export default async function DashboardShareDetailPage({
@@ -31,8 +35,8 @@ export default async function DashboardShareDetailPage({
     notFound();
   }
 
-  const appUrl = process.env.APP_URL ?? process.env.AUTH_URL ?? "http://localhost:3000";
-  const shareUrl = `${appUrl}/dashboard-share/${share.shareSlug}`;
+  const canRevokeOrDelete = await canUserManageShare(user, share);
+  const shareUrl = `${getAppUrl()}/dashboard-share/${share.shareSlug}`;
 
   return (
     <div>
@@ -75,7 +79,12 @@ export default async function DashboardShareDetailPage({
         </div>
       </div>
 
-      <ShareAdminActions shareId={shareId} status={share.status} />
+      <ShareAdminActions
+        shareId={shareId}
+        websiteId={websiteId}
+        status={share.status}
+        canRevokeOrDelete={canRevokeOrDelete}
+      />
     </div>
   );
 }

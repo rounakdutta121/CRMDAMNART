@@ -72,7 +72,8 @@ export function getAuthSecret(): string {
 
 export function getAppUrl(): string {
   const env = getServerEnv();
-  return env.APP_URL ?? env.AUTH_URL ?? "http://localhost:3000";
+  const url = env.APP_URL ?? env.AUTH_URL ?? "http://localhost:3000";
+  return url.replace(/\/+$/, "");
 }
 
 export function isProduction(): boolean {

@@ -66,6 +66,17 @@ export async function updateDashboardShare(
   );
 }
 
+export async function deleteDashboardShare(id: string): Promise<void> {
+  const db = await getDb();
+  const shareObjectId = new ObjectId(id);
+  await db
+    .collection<DashboardShare>(COLLECTIONS.dashboardShares)
+    .deleteOne({ _id: shareObjectId });
+  await db
+    .collection<DashboardShareAccessLog>(COLLECTIONS.dashboardShareAccessLogs)
+    .deleteMany({ dashboardShareId: shareObjectId });
+}
+
 export async function incrementDashboardShareViewCount(id: string): Promise<void> {
   const db = await getDb();
   const now = new Date();

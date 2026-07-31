@@ -1,7 +1,10 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import {
+  deleteDashboardShareAction,
   regenerateDashboardShareSlugAction,
   revokeDashboardShareAction,
   type ActionResult,
@@ -12,19 +15,57 @@ import type { DashboardShareStatus } from "@/types/dashboard-share";
 
 export function ShareAdminActions({
   shareId,
+  websiteId,
   status,
+  canRevokeOrDelete,
 }: {
   shareId: string;
+  websiteId: string;
   status: DashboardShareStatus;
+  canRevokeOrDelete: boolean;
 }) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
 
   function handleRevoke() {
+    if (!confirm("Revoke this share? The public link will stop working.")) {
+      return;
+    }
+
     startTransition(async () => {
       const result = await revokeDashboardShareAction(shareId);
+      if (!result.success) {
+        toast.error(result.message);
+        setMessage(result.message ?? null);
+        return;
+      }
+      toast.success(result.message ?? "Dashboard share revoked.");
       setMessage(result.message ?? null);
+      router.refresh();
+    });
+  }
+
+  function handleDelete() {
+    if (
+      !confirm(
+        "Permanently delete this share? This cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await deleteDashboardShareAction(shareId);
+      if (!result.success) {
+        toast.error(result.message);
+        setMessage(result.message ?? null);
+        return;
+      }
+      toast.success(result.message ?? "Dashboard share deleted.");
+      router.push(`/websites/${websiteId}/performance/shares`);
+      router.refresh();
     });
   }
 
@@ -32,7 +73,12 @@ export function ShareAdminActions({
     startTransition(async () => {
       const result: ActionResult = await regenerateDashboardShareSlugAction(shareId);
       setMessage(result.message ?? null);
-      if (result.success && result.data?.shareUrl) {
+      if (!result.success) {
+        toast.error(result.message);
+        return;
+      }
+      toast.success(result.message ?? "Share link regenerated.");
+      if (result.data?.shareUrl) {
         setShareUrl(String(result.data.shareUrl));
       }
     });
@@ -49,7 +95,7 @@ export function ShareAdminActions({
         >
           Regenerate link
         </Button>
-        {status !== "revoked" ? (
+        {canRevokeOrDelete && status !== "revoked" ? (
           <Button
             type="button"
             variant="outline"
@@ -57,6 +103,16 @@ export function ShareAdminActions({
             onClick={handleRevoke}
           >
             Revoke share
+          </Button>
+        ) : null}
+        {canRevokeOrDelete && status === "revoked" ? (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={pending}
+            onClick={handleDelete}
+          >
+            Delete share
           </Button>
         ) : null}
       </div>
