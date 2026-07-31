@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import type { ActionResult } from "@/app/actions";
+import { useGlobalLoading } from "@/components/shared/global-loading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +24,7 @@ export function RenameEntityButton({
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(currentName);
   const [pending, startTransition] = useTransition();
+  useGlobalLoading(pending);
 
   function handleSave() {
     const next = name.trim();

@@ -9,6 +9,7 @@ import {
   type ActionResult,
 } from "@/app/actions";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
+import { GlobalLoadingSync } from "@/components/shared/global-loading";
 import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -59,6 +60,7 @@ export function WebsiteTeamPanel({
 
   return (
     <div>
+      <GlobalLoadingSync pending={addPending || removePending} />
       <Breadcrumbs
         items={[
           { label: "Websites", href: "/websites" },

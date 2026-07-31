@@ -7,6 +7,7 @@ import {
   updateLeadAction,
   type ActionResult,
 } from "@/app/actions";
+import { GlobalLoadingSync } from "@/components/shared/global-loading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -93,6 +94,7 @@ export function LeadActionsPanel({
 
   return (
     <div className="space-y-6">
+      <GlobalLoadingSync pending={leadPending || contactPending} />
       {canEdit ? (
         <section className="border border-[var(--border)] bg-[var(--surface-elevated)] p-4">
           <h3 className="mb-3 text-sm font-semibold text-[var(--ink)]">

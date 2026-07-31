@@ -8,6 +8,7 @@ import {
   acceptInvitationAction,
   type ActionResult,
 } from "@/app/actions";
+import { GlobalLoadingSync } from "@/components/shared/global-loading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,6 +41,7 @@ export function AcceptInvitationForm({
 
   return (
     <div className="archive-grain flex min-h-screen items-center justify-center bg-background px-4 py-10">
+      <GlobalLoadingSync pending={pending} />
       <div className="page-editorial w-full">
         <div className="mb-8 border-b border-[var(--border-strong)] pb-6">
           <p className="font-meta text-[0.6875rem] text-[var(--ink-subtle)]">

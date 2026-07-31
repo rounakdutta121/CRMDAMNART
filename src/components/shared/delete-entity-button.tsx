@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "sonner";
 import type { ActionResult } from "@/app/actions";
+import { useGlobalLoading } from "@/components/shared/global-loading";
 import { Button } from "@/components/ui/button";
 
 export function DeleteEntityButton({
@@ -23,6 +24,7 @@ export function DeleteEntityButton({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  useGlobalLoading(pending);
 
   function handleClick() {
     if (!confirm(confirmMessage)) {

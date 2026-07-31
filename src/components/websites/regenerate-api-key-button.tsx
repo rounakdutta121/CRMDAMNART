@@ -13,10 +13,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { CopyButton } from "@/components/shared/copy-button";
+import { useGlobalLoading } from "@/components/shared/global-loading";
 import { useState } from "react";
 
 export function RegenerateApiKeyButton({ websiteId }: { websiteId: string }) {
   const [pending, startTransition] = useTransition();
+  useGlobalLoading(pending);
   const [newKey, setNewKey] = useState<string | null>(null);
 
   function handleRegenerate() {

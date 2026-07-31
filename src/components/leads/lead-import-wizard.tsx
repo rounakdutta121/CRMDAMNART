@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { importLeadsAction } from "@/app/actions";
+import { useGlobalLoading } from "@/components/shared/global-loading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +34,7 @@ export function LeadImportWizard({
   const [mappings, setMappings] = useState<Record<string, string>>({});
   const [websiteId, setWebsiteId] = useState(websites[0]?.id ?? "");
   const [pending, startTransition] = useTransition();
+  useGlobalLoading(pending);
 
   const rowObjects = useMemo(
     () =>

@@ -7,6 +7,7 @@ import {
   type ActionResult,
 } from "@/app/actions";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
+import { GlobalLoadingSync } from "@/components/shared/global-loading";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,6 +45,7 @@ export function NewDashboardShareForm({
 
   return (
     <div>
+      <GlobalLoadingSync pending={pending} />
       <Breadcrumbs
         items={[
           { label: "Websites", href: "/websites" },

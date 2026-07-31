@@ -6,6 +6,7 @@ import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { bulkLeadAction } from "@/app/actions";
 import { MobileRecordCard } from "@/components/shared/mobile-record-card";
+import { useGlobalLoading } from "@/components/shared/global-loading";
 import {
   LeadStatusBadge,
   PriorityBadge,
@@ -70,6 +71,7 @@ export function LeadsTable({
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkPending, startBulkTransition] = useTransition();
+  useGlobalLoading(bulkPending);
 
   const allSelected = rows.length > 0 && selected.size === rows.length;
   const selectedIds = useMemo(() => Array.from(selected), [selected]);

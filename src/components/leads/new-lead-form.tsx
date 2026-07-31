@@ -7,6 +7,7 @@ import {
   getActiveSortedFields,
 } from "@/components/forms/dynamic-form-field";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
+import { GlobalLoadingSync } from "@/components/shared/global-loading";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -75,6 +76,7 @@ export function NewLeadForm({
 
   return (
     <div>
+      <GlobalLoadingSync pending={pending} />
       <Breadcrumbs
         items={[
           { label: "Leads", href: "/leads" },

@@ -3,6 +3,7 @@
 import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
 import { mergeContactsAction, type ActionResult } from "@/app/actions";
+import { GlobalLoadingSync } from "@/components/shared/global-loading";
 import { Button } from "@/components/ui/button";
 
 const initial: ActionResult = { success: false, message: "" };
@@ -37,6 +38,7 @@ export function ContactMergePanel({
 
   return (
     <form action={action} className="space-y-4 border border-[var(--border)] bg-[var(--surface-elevated)] p-4">
+      <GlobalLoadingSync pending={pending} />
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-1">
           <label htmlFor="primaryContactId" className="text-sm font-medium">

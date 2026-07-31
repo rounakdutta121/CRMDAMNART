@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { loginSchema, type LoginInput } from "@/lib/validation/auth.schema";
+import { useGlobalLoading } from "@/components/shared/global-loading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +17,7 @@ import { format } from "date-fns";
 export default function LoginPage() {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  useGlobalLoading(pending);
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm<LoginInput>({

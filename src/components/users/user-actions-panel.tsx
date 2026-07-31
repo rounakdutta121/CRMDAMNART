@@ -7,6 +7,7 @@ import {
   resetPasswordAction,
   type ActionResult,
 } from "@/app/actions";
+import { GlobalLoadingSync } from "@/components/shared/global-loading";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -47,6 +48,7 @@ export function UserActionsPanel({
 
   return (
     <div className="space-y-4">
+      <GlobalLoadingSync pending={resetPending || deactivatePending} />
       <Card>
         <CardHeader>
           <CardTitle>Reset password</CardTitle>

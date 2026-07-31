@@ -7,6 +7,7 @@ import {
 } from "@/app/actions";
 import { CopyButton } from "@/components/shared/copy-button";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
+import { GlobalLoadingSync } from "@/components/shared/global-loading";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -38,6 +39,7 @@ export function InviteUserForm({
 
   return (
     <div>
+      <GlobalLoadingSync pending={pending} />
       <Breadcrumbs
         items={[
           { label: "Settings" },

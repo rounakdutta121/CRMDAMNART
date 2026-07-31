@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { testFormSubmissionAction, type ActionResult } from "@/app/actions";
+import { GlobalLoadingSync } from "@/components/shared/global-loading";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -116,6 +117,7 @@ export function TestFormPanel({
 
   return (
     <div className="grid gap-4 xl:grid-cols-2">
+      <GlobalLoadingSync pending={validatePending || submitPending} />
       <Card>
         <CardHeader>
           <CardTitle>Validate submission</CardTitle>
