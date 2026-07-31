@@ -1,16 +1,15 @@
 import { ObjectId } from "mongodb";
 import { writeAuditLog } from "@/lib/audit";
 import {
+  LEAD_STATUS_LABELS,
   MAX_BULK_ACTION_SIZE,
-  SALES_STATUS_LABELS,
 } from "@/lib/constants";
 import {
   assertCanAccessWebsite,
   assertCanAssignLeadToUser,
   assertCanViewLead,
   canAssignLeads,
-  canChangeFulfilmentStatus,
-  canChangeSalesStatus,
+  canChangeStatus,
   canPerformBulkActions,
   PermissionError,
 } from "@/lib/permissions";
@@ -23,7 +22,7 @@ import {
 } from "@/repositories/leads.repository";
 import { findUserById } from "@/repositories/users.repository";
 import type { SessionUser } from "@/types/auth";
-import type { FulfilmentStatus, LeadPriority, SalesStatus } from "@/types/lead";
+import type { LeadPriority, LeadStatus } from "@/types/lead";
 
 export interface BulkActionResult {
   updated: number;
@@ -135,7 +134,7 @@ export async function performBulkLeadAction(
 
     const updated = await bulkUpdateLeads(accessibleIds, {
       assignedUserId,
-      salesStatus: assignedUserId ? "assigned" : "new",
+      status: assignedUserId ? "assigned" : "new",
     });
 
     await writeAuditLog({
@@ -153,37 +152,13 @@ export async function performBulkLeadAction(
   }
 
   if (input.action === "change_status") {
-    if (
-      input.salesStatus &&
-      !canChangeSalesStatus(user.role)
-    ) {
-      throw new PermissionError("You are not allowed to change sales status.");
+    if (!canChangeStatus(user.role)) {
+      throw new PermissionError("You are not allowed to change status.");
     }
 
-    if (
-      input.fulfilmentStatus &&
-      !canChangeFulfilmentStatus(user.role)
-    ) {
-      throw new PermissionError(
-        "You are not allowed to change fulfilment status."
-      );
-    }
-
-    if (!input.salesStatus && !input.fulfilmentStatus) {
-      throw new Error("Provide a sales or fulfilment status to update.");
-    }
-
-    const update: {
-      salesStatus?: SalesStatus;
-      fulfilmentStatus?: FulfilmentStatus;
-    } = {};
-
-    if (input.salesStatus) {
-      update.salesStatus = input.salesStatus as SalesStatus;
-    }
-    if (input.fulfilmentStatus) {
-      update.fulfilmentStatus = input.fulfilmentStatus as FulfilmentStatus;
-    }
+    const update = {
+      status: input.status as LeadStatus,
+    };
 
     const updated = await bulkUpdateLeads(accessibleIds, update);
 
@@ -197,10 +172,8 @@ export async function performBulkLeadAction(
         leadId: lead._id,
         contactId: lead.contactId,
         websiteId: lead.websiteId,
-        type: input.salesStatus ? "status_changed" : "fulfilment_status_changed",
-        description: input.salesStatus
-          ? `Sales status changed to ${SALES_STATUS_LABELS[update.salesStatus!]}.`
-          : "Fulfilment status changed via bulk action.",
+        type: "status_changed",
+        description: `Status changed to ${LEAD_STATUS_LABELS[update.status]}.`,
         createdByUserId: new ObjectId(user.id),
         createdAt: now,
       });
@@ -240,7 +213,7 @@ export async function performBulkLeadAction(
   }
 
   const updated = await bulkUpdateLeads(accessibleIds, {
-    salesStatus: "spam_invalid",
+    status: "spam_invalid",
   });
 
   for (const leadId of accessibleIds) {

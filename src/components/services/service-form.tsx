@@ -104,17 +104,6 @@ export function ServiceForm({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="defaultLeadValue">Default lead value</Label>
-                <Input
-                  id="defaultLeadValue"
-                  name="defaultLeadValue"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  defaultValue={service?.defaultLeadValue ?? ""}
-                />
-              </div>
-              <div className="space-y-2">
                 <Label htmlFor="defaultLeadOwnerId">Default lead owner</Label>
                 <select
                   id="defaultLeadOwnerId"

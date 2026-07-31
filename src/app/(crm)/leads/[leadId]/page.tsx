@@ -4,13 +4,11 @@ import { notFound } from "next/navigation";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { PageHeader } from "@/components/shared/page-header";
 import {
-  FulfilmentStatusBadge,
+  LeadStatusBadge,
   PriorityBadge,
-  SalesStatusBadge,
   SourceBadge,
 } from "@/components/shared/status-badges";
 import { AssignmentHistorySection } from "@/components/leads/assignment-history-section";
-import { CommunicationLogForm } from "@/components/leads/communication-log-form";
 import { LeadActionsPanel } from "@/components/leads/lead-actions-panel";
 import { LeadFormDataSection } from "@/components/leads/lead-form-data-section";
 import { PossibleDuplicatesSection } from "@/components/leads/possible-duplicates-section";
@@ -20,10 +18,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { deleteLeadAction } from "@/app/actions";
 import { requireSession } from "@/lib/auth";
 import {
-  canAddNotes,
   canAssignLeads,
-  canChangeFulfilmentStatus,
-  canChangeSalesStatus,
+  canChangeStatus,
   canDeleteLeads,
   canEditContacts,
   canEditLeads,
@@ -57,7 +53,6 @@ function hasContactFields(contact: {
   phone?: string;
   whatsapp?: string;
   company?: string;
-  jobTitle?: string;
   country?: string;
   state?: string;
   city?: string;
@@ -68,7 +63,6 @@ function hasContactFields(contact: {
       contact.phone ||
       contact.whatsapp ||
       contact.company ||
-      contact.jobTitle ||
       contact.country ||
       contact.state ||
       contact.city
@@ -136,15 +130,8 @@ export default async function LeadDetailPage({
     { label: "Website", value: website.name },
     { label: "Form", value: lead.formName },
     { label: "Service", value: lead.service },
-    { label: "Category", value: lead.serviceCategory },
     { label: "Source", value: lead.sourceSystem },
-    {
-      label: "Lead value",
-      value:
-        lead.leadValue !== undefined
-          ? `${lead.currency} ${lead.leadValue}`
-          : undefined,
-    },
+    { label: "Currency", value: lead.currency },
     {
       label: "Created",
       value: format(lead.createdAt, "dd MMM yyyy HH:mm"),
@@ -154,12 +141,6 @@ export default async function LeadDetailPage({
 
   const salesRows = [
     { label: "Assigned", value: assignedUser?.name ?? "Unassigned" },
-    {
-      label: "Next follow-up",
-      value: lead.nextFollowUpAt
-        ? format(lead.nextFollowUpAt, "dd MMM yyyy HH:mm")
-        : undefined,
-    },
     {
       label: "Confirmed",
       value: lead.confirmedAt
@@ -175,14 +156,6 @@ export default async function LeadDetailPage({
       value: lead.convertedAt
         ? format(lead.convertedAt, "dd MMM yyyy HH:mm")
         : undefined,
-    },
-    { label: "Lost reason", value: lead.lostReason },
-  ].filter((row) => row.value);
-
-  const operationsRows = [
-    {
-      label: "Fulfilment",
-      value: <FulfilmentStatusBadge status={lead.fulfilmentStatus} />,
     },
     {
       label: "Completed",
@@ -224,8 +197,7 @@ export default async function LeadDetailPage({
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
-        <SalesStatusBadge status={lead.salesStatus} />
-        <FulfilmentStatusBadge status={lead.fulfilmentStatus} />
+        <LeadStatusBadge status={lead.status} />
         <PriorityBadge priority={lead.priority} />
         <SourceBadge source={lead.sourceSystem} />
       </div>
@@ -248,7 +220,6 @@ export default async function LeadDetailPage({
                 <DetailRow label="Phone" value={contact.phone} />
                 <DetailRow label="WhatsApp" value={contact.whatsapp} />
                 <DetailRow label="Company" value={contact.company} />
-                <DetailRow label="Job title" value={contact.jobTitle} />
                 <DetailRow label="Country" value={contact.country} />
                 <DetailRow label="State" value={contact.state} />
                 <DetailRow label="City" value={contact.city} />
@@ -346,22 +317,7 @@ export default async function LeadDetailPage({
             </Card>
           ) : null}
 
-          {operationsRows.length > 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Operations</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {operationsRows.map((row) => (
-                  <DetailRow key={row.label} label={row.label} value={row.value} />
-                ))}
-              </CardContent>
-            </Card>
-          ) : null}
-
           <AssignmentHistorySection items={assignmentHistory} />
-
-          <CommunicationLogForm leadId={leadId} canLog={canAddNotes(user.role)} />
 
           <Card>
             <CardHeader>
@@ -395,16 +351,12 @@ export default async function LeadDetailPage({
             id: lead._id.toHexString(),
             websiteId: lead.websiteId.toHexString(),
             service: lead.service,
-            serviceCategory: lead.serviceCategory,
             formName: lead.formName,
             message: lead.message,
-            salesStatus: lead.salesStatus,
-            fulfilmentStatus: lead.fulfilmentStatus,
+            status: lead.status,
             priority: lead.priority,
-            leadValue: lead.leadValue,
             currency: lead.currency,
             assignedUserId: lead.assignedUserId?.toHexString(),
-            lostReason: lead.lostReason,
           }}
           contact={{
             id: contact._id.toHexString(),
@@ -413,16 +365,13 @@ export default async function LeadDetailPage({
             phone: contact.phone,
             whatsapp: contact.whatsapp,
             company: contact.company,
-            jobTitle: contact.jobTitle,
             country: contact.country,
             state: contact.state,
             city: contact.city,
           }}
           users={actionUsers}
           canEdit={canEditContacts(user.role) || canEditLeads(user.role)}
-          canNote={canAddNotes(user.role)}
-          canSales={canChangeSalesStatus(user.role)}
-          canFulfilment={canChangeFulfilmentStatus(user.role)}
+          canChangeStatus={canChangeStatus(user.role)}
           canAssign={canAssignLeads(user.role)}
         />
       </div>

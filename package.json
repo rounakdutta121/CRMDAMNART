@@ -14,6 +14,7 @@
     "seed": "tsx --env-file=.env scripts/seed.ts",
     "create-indexes": "tsx --env-file=.env scripts/create-indexes.ts",
     "db:indexes": "npm run create-indexes",
+    "db:simplify": "tsx scripts/simplify-crm-schema.ts",
     "smoke-test": "tsx scripts/smoke-test.ts",
     "test": "vitest run",
     "test:watch": "vitest"

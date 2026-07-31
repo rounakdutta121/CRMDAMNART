@@ -14,12 +14,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  FULFILMENT_STATUSES,
-  FULFILMENT_STATUS_LABELS,
   LEAD_PRIORITIES,
   LEAD_PRIORITY_LABELS,
-  SALES_STATUSES,
-  SALES_STATUS_LABELS,
+  LEAD_STATUSES,
+  LEAD_STATUS_LABELS,
 } from "@/lib/constants";
 import type { FormFieldDefinition } from "@/types/form";
 
@@ -181,10 +179,6 @@ export function NewLeadForm({
                   <Input id="company" name="company" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="jobTitle">Job title</Label>
-                  <Input id="jobTitle" name="jobTitle" />
-                </div>
-                <div className="space-y-2">
                   <Label htmlFor="country">Country</Label>
                   <Input id="country" name="country" />
                 </div>
@@ -201,32 +195,17 @@ export function NewLeadForm({
               </h3>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="salesStatus">Sales status</Label>
+                  <Label htmlFor="status">Status</Label>
                   <select
-                    id="salesStatus"
-                    name="salesStatus"
+                    id="status"
+                    name="status"
                     required
                     defaultValue="new"
                     className="h-10 w-full rounded-md border border-[var(--border)] px-3 text-sm"
                   >
-                    {SALES_STATUSES.map((status) => (
+                    {LEAD_STATUSES.map((status) => (
                       <option key={status} value={status}>
-                        {SALES_STATUS_LABELS[status]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="fulfilmentStatus">Fulfilment status</Label>
-                  <select
-                    id="fulfilmentStatus"
-                    name="fulfilmentStatus"
-                    defaultValue="not_started"
-                    className="h-10 w-full rounded-md border border-[var(--border)] px-3 text-sm"
-                  >
-                    {FULFILMENT_STATUSES.map((status) => (
-                      <option key={status} value={status}>
-                        {FULFILMENT_STATUS_LABELS[status]}
+                        {LEAD_STATUS_LABELS[status]}
                       </option>
                     ))}
                   </select>
@@ -260,10 +239,6 @@ export function NewLeadForm({
                       </option>
                     ))}
                   </select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="leadValue">Lead value</Label>
-                  <Input id="leadValue" name="leadValue" type="number" min="0" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="currency">Currency</Label>

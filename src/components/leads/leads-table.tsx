@@ -7,24 +7,20 @@ import { toast } from "sonner";
 import { bulkLeadAction } from "@/app/actions";
 import { MobileRecordCard } from "@/components/shared/mobile-record-card";
 import {
-  FulfilmentStatusBadge,
+  LeadStatusBadge,
   PriorityBadge,
-  SalesStatusBadge,
   SourceBadge,
 } from "@/components/shared/status-badges";
 import { Button } from "@/components/ui/button";
 import {
-  FULFILMENT_STATUSES,
-  FULFILMENT_STATUS_LABELS,
   LEAD_PRIORITIES,
   LEAD_PRIORITY_LABELS,
-  SALES_STATUSES,
-  SALES_STATUS_LABELS,
+  LEAD_STATUSES,
+  LEAD_STATUS_LABELS,
 } from "@/lib/constants";
 import type {
-  FulfilmentStatus,
   LeadPriority,
-  SalesStatus,
+  LeadStatus,
   SourceSystem,
 } from "@/types/lead";
 
@@ -37,11 +33,9 @@ export interface SerializedLeadRow {
   phone: string;
   email: string;
   sourceSystem: SourceSystem;
-  salesStatus: SalesStatus;
-  fulfilmentStatus: FulfilmentStatus;
+  status: LeadStatus;
   assigneeName: string;
   priority: LeadPriority;
-  nextFollowUpAt: string | null;
   createdAt: string;
   dynamicValues: Record<string, string>;
 }
@@ -169,27 +163,14 @@ export function LeadsTable({
               </select>
 
               <select
-                name="salesStatus"
+                name="status"
                 className={selectClass}
-                aria-label="Sales status"
+                aria-label="Status"
               >
-                <option value="">Sales status</option>
-                {SALES_STATUSES.map((status) => (
+                <option value="">Status</option>
+                {LEAD_STATUSES.map((status) => (
                   <option key={status} value={status}>
-                    {SALES_STATUS_LABELS[status]}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                name="fulfilmentStatus"
-                className={selectClass}
-                aria-label="Fulfilment status"
-              >
-                <option value="">Fulfilment status</option>
-                {FULFILMENT_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {FULFILMENT_STATUS_LABELS[status]}
+                    {LEAD_STATUS_LABELS[status]}
                   </option>
                 ))}
               </select>
@@ -251,7 +232,7 @@ export function LeadsTable({
               href={`/leads/${item.id}`}
               title={item.leadNumber}
               subtitle={item.contactName}
-              status={<SalesStatusBadge status={item.salesStatus} />}
+              status={<LeadStatusBadge status={item.status} />}
               className={canBulk ? "pl-10" : undefined}
               meta={[
                 { label: "Website", value: item.websiteName },
@@ -292,11 +273,9 @@ export function LeadsTable({
                 <th key={column.id}>{column.label}</th>
               ))}
               <th>Source</th>
-              <th>Sales</th>
-              <th>Fulfilment</th>
+              <th>Status</th>
               <th>Assignee</th>
               <th>Priority</th>
-              <th>Next follow-up</th>
               <th>Created</th>
             </tr>
           </thead>
@@ -338,19 +317,11 @@ export function LeadsTable({
                   <SourceBadge source={item.sourceSystem} />
                 </td>
                 <td>
-                  <SalesStatusBadge status={item.salesStatus} />
-                </td>
-                <td>
-                  <FulfilmentStatusBadge status={item.fulfilmentStatus} />
+                  <LeadStatusBadge status={item.status} />
                 </td>
                 <td>{item.assigneeName}</td>
                 <td>
                   <PriorityBadge priority={item.priority} />
-                </td>
-                <td className="font-mono-id text-xs">
-                  {item.nextFollowUpAt
-                    ? format(new Date(item.nextFollowUpAt), "dd MMM yyyy")
-                    : "—"}
                 </td>
                 <td className="font-mono-id text-xs">
                   {format(new Date(item.createdAt), "dd MMM yyyy")}

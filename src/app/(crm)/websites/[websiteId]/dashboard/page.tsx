@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { format } from "date-fns";
 import { notFound } from "next/navigation";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { PageHeader } from "@/components/shared/page-header";
-import { SalesStatusBadge } from "@/components/shared/status-badges";
+import { LeadStatusBadge } from "@/components/shared/status-badges";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { requireSession } from "@/lib/auth";
@@ -69,8 +68,6 @@ export default async function WebsiteDashboardPage({
         <StatCard label="Total leads" value={data.stats.totalLeads} />
         <StatCard label="New today" value={data.stats.newLeadsToday} />
         <StatCard label="Unassigned" value={data.stats.unassignedLeads} />
-        <StatCard label="Follow-ups due today" value={data.stats.followUpsDueToday} />
-        <StatCard label="Overdue follow-ups" value={data.stats.overdueFollowUps} />
         <StatCard label="Qualified" value={data.stats.qualifiedLeads} />
         <StatCard label="Converted" value={data.stats.convertedLeads} />
       </div>
@@ -137,30 +134,8 @@ export default async function WebsiteDashboardPage({
                   <p className="text-sm font-medium">{item.contactName}</p>
                   <p className="text-xs text-[var(--ink-muted)]">{item.lead.leadNumber}</p>
                 </div>
-                <SalesStatusBadge status={item.lead.salesStatus} />
+                <LeadStatusBadge status={item.lead.status} />
               </Link>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Upcoming follow-ups</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {data.upcomingFollowUps.map((item) => (
-              <div
-                key={item.followUp._id.toHexString()}
-                className="flex items-center justify-between rounded-md border border-[var(--border)] px-3 py-2"
-              >
-                <div>
-                  <p className="text-sm font-medium">{item.contactName}</p>
-                  <p className="text-xs text-[var(--ink-muted)]">{item.followUp.method}</p>
-                </div>
-                <p className="text-xs text-[var(--ink-muted)]">
-                  {format(item.followUp.scheduledAt, "dd MMM yyyy HH:mm")}
-                </p>
-              </div>
             ))}
           </CardContent>
         </Card>

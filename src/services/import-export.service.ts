@@ -24,11 +24,10 @@ import { findWebsiteById } from "@/repositories/websites.repository";
 import { findOrCreateContact } from "@/services/contacts.service";
 import type { SessionUser } from "@/types/auth";
 import type { LeadFormFieldValue } from "@/types/form";
-import type { LeadPriority, SalesStatus } from "@/types/lead";
+import type { LeadPriority, LeadStatus } from "@/types/lead";
 import {
-  FULFILMENT_STATUS_LABELS,
   LEAD_PRIORITY_LABELS,
-  SALES_STATUS_LABELS,
+  LEAD_STATUS_LABELS,
   SOURCE_SYSTEM_LABELS,
 } from "@/lib/constants";
 
@@ -38,17 +37,14 @@ export const CANONICAL_IMPORT_FIELDS = [
   "phone",
   "whatsapp",
   "company",
-  "jobTitle",
   "country",
   "state",
   "city",
   "service",
-  "serviceCategory",
   "message",
-  "leadValue",
   "currency",
   "priority",
-  "salesStatus",
+  "status",
 ] as const;
 
 const BASE_EXPORT_HEADERS = [
@@ -60,13 +56,10 @@ const BASE_EXPORT_HEADERS = [
   "website",
   "service",
   "source",
-  "salesStatus",
-  "fulfilmentStatus",
+  "status",
   "priority",
   "assignee",
-  "leadValue",
   "currency",
-  "nextFollowUpAt",
   "createdAt",
 ];
 
@@ -155,7 +148,6 @@ export async function importLeadsFromCsv(
         phone: mapped.phone,
         whatsapp: mapped.whatsapp,
         company: mapped.company,
-        jobTitle: mapped.jobTitle,
         country: mapped.country,
         state: mapped.state,
         city: mapped.city,
@@ -163,24 +155,17 @@ export async function importLeadsFromCsv(
 
       const now = new Date();
       const leadNumber = await generateLeadNumber(now.getFullYear());
-      const leadValue = mapped.leadValue
-        ? Number.parseFloat(mapped.leadValue)
-        : undefined;
-
       const lead = await createLead({
         leadNumber,
         contactId: contact._id,
         websiteId: website._id,
         sourceSystem: "import",
         service,
-        serviceCategory: normalizeOptionalString(mapped.serviceCategory),
         message: normalizeOptionalString(mapped.message),
         assignedUserId: website.defaultLeadOwnerId,
-        salesStatus:
-          (mapped.salesStatus as SalesStatus) ?? input.defaultSalesStatus,
-        fulfilmentStatus: "not_started",
+        status:
+          (mapped.status as LeadStatus) ?? input.defaultStatus,
         priority: (mapped.priority as LeadPriority) ?? input.defaultPriority,
-        leadValue: Number.isFinite(leadValue) ? leadValue : undefined,
         currency: mapped.currency?.toUpperCase() ?? website.defaultCurrency,
         createdAt: now,
         updatedAt: now,
@@ -250,8 +235,7 @@ export async function exportLeadsToCsv(
         formId: get("formId"),
         service: get("service"),
         serviceId: get("serviceId"),
-        salesStatus: get("salesStatus"),
-        fulfilmentStatus: get("fulfilmentStatus"),
+        status: get("status"),
         priority: get("priority"),
         sourceSystem: get("sourceSystem"),
         assignedUserId: get("assignedUserId"),
@@ -308,13 +292,10 @@ export async function exportLeadsToCsv(
       website?.name ?? "",
       lead.service ?? "",
       SOURCE_SYSTEM_LABELS[lead.sourceSystem],
-      SALES_STATUS_LABELS[lead.salesStatus],
-      FULFILMENT_STATUS_LABELS[lead.fulfilmentStatus],
+      LEAD_STATUS_LABELS[lead.status],
       LEAD_PRIORITY_LABELS[lead.priority],
       assignee?.name ?? "",
-      lead.leadValue !== undefined ? String(lead.leadValue) : "",
       lead.currency,
-      lead.nextFollowUpAt?.toISOString() ?? "",
       lead.createdAt.toISOString(),
     ];
 

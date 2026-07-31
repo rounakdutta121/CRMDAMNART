@@ -89,15 +89,6 @@ const KEY_MAPPING_RULES: Array<{
     },
   },
   {
-    pattern: /^(jobTitle|job_title|position)$/i,
-    mapping: {
-      fieldType: "text",
-      canonicalTarget: "contact.jobTitle",
-      label: "Job Title",
-      aliases: [],
-    },
-  },
-  {
     pattern: /^(country)$/i,
     mapping: {
       fieldType: "text",
@@ -139,24 +130,6 @@ const KEY_MAPPING_RULES: Array<{
       fieldType: "text",
       canonicalTarget: "lead.service",
       label: "Service",
-      aliases: [],
-    },
-  },
-  {
-    pattern: /^(serviceCategory|service_category)$/i,
-    mapping: {
-      fieldType: "text",
-      canonicalTarget: "lead.serviceCategory",
-      label: "Service Category",
-      aliases: [],
-    },
-  },
-  {
-    pattern: /^(leadValue|lead_value)$/i,
-    mapping: {
-      fieldType: "number",
-      canonicalTarget: "lead.leadValue",
-      label: "Lead Value",
       aliases: [],
     },
   },

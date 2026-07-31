@@ -1,8 +1,7 @@
 import { ObjectId } from "mongodb";
 import { writeAuditLog } from "@/lib/audit";
 import {
-  SALES_STATUS_LABELS,
-  FULFILMENT_STATUS_LABELS,
+  LEAD_STATUS_LABELS,
 } from "@/lib/constants";
 import { generateLeadNumber } from "@/lib/lead-number";
 import {
@@ -12,10 +11,8 @@ import { buildPaginatedResult, parsePagination } from "@/lib/pagination";
 import {
   assertCanAccessWebsite,
   assertCanAssignLeadToUser,
-  canAddNotes,
   canAssignLeads,
-  canChangeFulfilmentStatus,
-  canChangeSalesStatus,
+  canChangeStatus,
   canCreateManualLeads,
   canDeleteLeads,
   canEditLeads,
@@ -30,11 +27,8 @@ import {
   userCanViewUnassignedLeads,
 } from "@/lib/permissions";
 import type {
-  AddNoteInput,
-  ContactAttemptInput,
   CreateManualLeadFromFormInput,
   CreateManualLeadInput,
-  ScheduleFollowUpInput,
   UpdateLeadInput,
 } from "@/lib/validation/lead.schema";
 import { createActivity, listActivitiesByLeadId } from "@/repositories/activities.repository";
@@ -67,7 +61,6 @@ import {
   FormSubmissionMappingError,
   mapFormSubmission,
 } from "@/services/form-submission-mapper.service";
-import { scheduleFollowUp } from "@/services/follow-ups.service";
 import type { CRMService } from "@/types/service";
 import type { WebsiteForm } from "@/types/form";
 import type { SessionUser } from "@/types/auth";
@@ -75,10 +68,9 @@ import type { LeadActivity } from "@/types/activity";
 import type { LeadAttribution } from "@/types/attribution";
 import type { Contact } from "@/types/contact";
 import type {
-  FulfilmentStatus,
   Lead,
   LeadPriority,
-  SalesStatus,
+  LeadStatus,
 } from "@/types/lead";
 import type { SafeWebsite } from "@/types/website";
 import type { SafeCRMUser } from "@/types/auth";
@@ -224,8 +216,7 @@ export async function getLeadsPage(
     websiteIds,
     websiteId: get("websiteId"),
     service: get("service"),
-    salesStatus: get("salesStatus"),
-    fulfilmentStatus: get("fulfilmentStatus"),
+    status: get("status"),
     priority: get("priority"),
     sourceSystem: get("sourceSystem"),
     assignedUserId,
@@ -240,11 +231,6 @@ export async function getLeadsPage(
       : viewMode === "monthly" && selectedYear && selectedMonth
         ? endOfMonth(Number(selectedYear), Number(selectedMonth))
         : undefined,
-    followUpDue: get("followUpDue") as
-      | "today"
-      | "overdue"
-      | "upcoming"
-      | undefined,
     leadIdsWithGclid,
     leadIdsMissingAttribution,
     contactIds,
@@ -456,7 +442,6 @@ export async function createManualLead(
     phone: input.phone,
     whatsapp: input.whatsapp,
     company: input.company,
-    jobTitle: input.jobTitle,
     country: input.country,
     state: input.state,
     city: input.city,
@@ -475,13 +460,10 @@ export async function createManualLead(
     formName: normalizeOptionalString(input.formName),
     sourceSystem: "manual",
     service: input.service.trim(),
-    serviceCategory: normalizeOptionalString(input.serviceCategory),
     message: normalizeOptionalString(input.message),
     assignedUserId,
-    salesStatus: input.salesStatus as SalesStatus,
-    fulfilmentStatus: "not_started",
+    status: input.status as LeadStatus,
     priority: (input.priority ?? "normal") as LeadPriority,
-    leadValue: input.leadValue,
     currency: input.currency?.toUpperCase() ?? website.defaultCurrency,
     createdAt: now,
     updatedAt: now,
@@ -505,7 +487,7 @@ export async function createManualLead(
     websiteId: website._id,
     newValues: {
       leadNumber: lead.leadNumber,
-      salesStatus: lead.salesStatus,
+      status: lead.status,
       service: lead.service,
     },
   });
@@ -657,7 +639,6 @@ export async function createManualLeadFromForm(
     phone: mapped.contactData.phone,
     whatsapp: mapped.contactData.whatsapp,
     company: mapped.contactData.company,
-    jobTitle: mapped.contactData.jobTitle,
     country: mapped.contactData.country,
     state: mapped.contactData.state,
     city: mapped.contactData.city,
@@ -679,13 +660,10 @@ export async function createManualLeadFromForm(
     serviceId: serviceResolution.serviceId,
     service: serviceResolution.serviceName ?? mapped.leadData.service ?? "General enquiry",
     submittedServiceName: mapped.leadData.service,
-    serviceCategory: mapped.leadData.serviceCategory,
     message: mapped.leadData.message,
     assignedUserId,
-    salesStatus: (input.salesStatus ?? "new") as SalesStatus,
-    fulfilmentStatus: (input.fulfilmentStatus ?? "not_started") as FulfilmentStatus,
+    status: (input.status ?? "new") as LeadStatus,
     priority: (input.priority ?? mapped.leadData.priority ?? "normal") as LeadPriority,
-    leadValue: input.leadValue ?? mapped.leadData.leadValue,
     currency:
       input.currency?.toUpperCase() ??
       mapped.leadData.currency?.toUpperCase() ??
@@ -746,7 +724,7 @@ export async function createManualLeadFromForm(
     newValues: {
       leadNumber: lead.leadNumber,
       formCode: form.code,
-      salesStatus: lead.salesStatus,
+      status: lead.status,
       service: lead.service,
     },
   });
@@ -774,9 +752,6 @@ export async function updateLeadForUser(
   const now = new Date();
 
   if (input.service !== undefined) update.service = input.service;
-  if (input.serviceCategory !== undefined) {
-    update.serviceCategory = normalizeOptionalString(input.serviceCategory);
-  }
   if (input.formName !== undefined) {
     update.formName = normalizeOptionalString(input.formName);
   }
@@ -788,17 +763,6 @@ export async function updateLeadForUser(
   }
   if (input.currency !== undefined) {
     update.currency = input.currency.toUpperCase();
-  }
-  if (input.leadValue !== undefined) {
-    update.leadValue = input.leadValue ?? undefined;
-  }
-  if (input.lostReason !== undefined) {
-    update.lostReason = input.lostReason ?? undefined;
-  }
-  if (input.nextFollowUpAt !== undefined) {
-    update.nextFollowUpAt = input.nextFollowUpAt
-      ? new Date(input.nextFollowUpAt)
-      : undefined;
   }
 
   if (input.assignedUserId !== undefined) {
@@ -868,23 +832,23 @@ export async function updateLeadForUser(
     }
   }
 
-  if (input.salesStatus !== undefined) {
-    if (!canChangeSalesStatus(user.role)) {
-      throw new PermissionError("You are not allowed to change sales status.");
+  if (input.status !== undefined) {
+    if (!canChangeStatus(user.role)) {
+      throw new PermissionError("You are not allowed to change status.");
     }
 
-    const nextStatus = input.salesStatus as SalesStatus;
-    if (nextStatus !== existing.salesStatus) {
-      update.salesStatus = nextStatus;
+    const nextStatus = input.status as LeadStatus;
+    if (nextStatus !== existing.status) {
+      update.status = nextStatus;
 
       await createActivity({
         leadId: existing._id,
         contactId: existing.contactId,
         websiteId: existing.websiteId,
         type: "status_changed",
-        description: `Sales status changed from ${SALES_STATUS_LABELS[existing.salesStatus]} to ${SALES_STATUS_LABELS[nextStatus]}.`,
+        description: `Status changed from ${LEAD_STATUS_LABELS[existing.status]} to ${LEAD_STATUS_LABELS[nextStatus]}.`,
         metadata: {
-          previous: existing.salesStatus,
+          previous: existing.status,
           next: nextStatus,
         },
         createdByUserId: new ObjectId(user.id),
@@ -893,12 +857,12 @@ export async function updateLeadForUser(
 
       await writeAuditLog({
         actingUserId: user.id,
-        action: "lead.sales_status_changed",
+        action: "lead.status_changed",
         entityType: "lead",
         entityId: leadId,
         websiteId: existing.websiteId,
-        previousValues: { salesStatus: existing.salesStatus },
-        newValues: { salesStatus: nextStatus },
+        previousValues: { status: existing.status },
+        newValues: { status: nextStatus },
       });
 
       if (nextStatus === "confirmed" && !existing.confirmedAt) {
@@ -928,70 +892,11 @@ export async function updateLeadForUser(
     }
   }
 
-  if (input.fulfilmentStatus !== undefined) {
-    if (!canChangeFulfilmentStatus(user.role)) {
-      throw new PermissionError(
-        "You are not allowed to change fulfilment status."
-      );
-    }
-
-    const nextStatus = input.fulfilmentStatus as FulfilmentStatus;
-    if (nextStatus !== existing.fulfilmentStatus) {
-      update.fulfilmentStatus = nextStatus;
-
-      await createActivity({
-        leadId: existing._id,
-        contactId: existing.contactId,
-        websiteId: existing.websiteId,
-        type: "fulfilment_status_changed",
-        description: `Fulfilment status changed from ${FULFILMENT_STATUS_LABELS[existing.fulfilmentStatus]} to ${FULFILMENT_STATUS_LABELS[nextStatus]}.`,
-        metadata: {
-          previous: existing.fulfilmentStatus,
-          next: nextStatus,
-        },
-        createdByUserId: new ObjectId(user.id),
-        createdAt: now,
-      });
-
-      await writeAuditLog({
-        actingUserId: user.id,
-        action: "lead.fulfilment_status_changed",
-        entityType: "lead",
-        entityId: leadId,
-        websiteId: existing.websiteId,
-        previousValues: { fulfilmentStatus: existing.fulfilmentStatus },
-        newValues: { fulfilmentStatus: nextStatus },
-      });
-
-      if (nextStatus === "completed" && !existing.completedAt) {
-        update.completedAt = now;
-        await createActivity({
-          leadId: existing._id,
-          contactId: existing.contactId,
-          websiteId: existing.websiteId,
-          type: "service_completed",
-          description: "Service marked as completed.",
-          createdByUserId: new ObjectId(user.id),
-          createdAt: now,
-        });
-        await writeAuditLog({
-          actingUserId: user.id,
-          action: "lead.completed",
-          entityType: "lead",
-          entityId: leadId,
-          websiteId: existing.websiteId,
-          newValues: { completedAt: now.toISOString() },
-        });
-      }
-    }
-  }
-
   if (Object.keys(update).length > 0) {
     await updateLead(leadId, update);
 
     if (
-      !input.salesStatus &&
-      !input.fulfilmentStatus &&
+      !input.status &&
       input.assignedUserId === undefined
     ) {
       await createActivity({
@@ -1011,83 +916,6 @@ export async function updateLeadForUser(
     throw new Error("Lead not found after update.");
   }
   return updated;
-}
-
-export async function addNoteToLead(
-  user: SessionUser,
-  leadId: string,
-  input: AddNoteInput
-): Promise<void> {
-  if (!canAddNotes(user.role)) {
-    throw new PermissionError("You are not allowed to add notes.");
-  }
-
-  const lead = await findLeadById(leadId);
-  if (!lead) {
-    throw new Error("Lead not found.");
-  }
-  assertCanAccessWebsite(user, lead.websiteId.toHexString());
-
-  await createActivity({
-    leadId: lead._id,
-    contactId: lead.contactId,
-    websiteId: lead.websiteId,
-    type: "note_added",
-    description: input.note.trim(),
-    createdByUserId: new ObjectId(user.id),
-    createdAt: new Date(),
-  });
-}
-
-export async function logContactAttempt(
-  user: SessionUser,
-  leadId: string,
-  input: ContactAttemptInput
-): Promise<void> {
-  if (!canAddNotes(user.role)) {
-    throw new PermissionError("You are not allowed to log contact attempts.");
-  }
-
-  const lead = await findLeadById(leadId);
-  if (!lead) {
-    throw new Error("Lead not found.");
-  }
-  assertCanAccessWebsite(user, lead.websiteId.toHexString());
-
-  const now = new Date();
-  await createActivity({
-    leadId: lead._id,
-    contactId: lead.contactId,
-    websiteId: lead.websiteId,
-    type: "contact_attempt",
-    description: input.note?.trim()
-      ? `Contact attempt (${input.method}): ${input.note.trim()}`
-      : `Contact attempt via ${input.method}.`,
-    metadata: { method: input.method },
-    createdByUserId: new ObjectId(user.id),
-    createdAt: now,
-  });
-
-  if (lead.salesStatus === "new" || lead.salesStatus === "assigned") {
-    await updateLead(leadId, { salesStatus: "contact_attempted" });
-    await createActivity({
-      leadId: lead._id,
-      contactId: lead.contactId,
-      websiteId: lead.websiteId,
-      type: "status_changed",
-      description: "Sales status changed to Contact Attempted.",
-      createdByUserId: new ObjectId(user.id),
-      createdAt: now,
-    });
-  }
-}
-
-export async function scheduleFollowUpForLead(
-  user: SessionUser,
-  leadId: string,
-  input: ScheduleFollowUpInput
-) {
-  return scheduleFollowUp(user, leadId, input);
 }
 
 export async function bulkUpdateLeadsForUser(
@@ -1145,29 +973,19 @@ export async function bulkUpdateLeadsForUser(
       }
     }
   } else if (input.action === "change_status") {
-    if (input.salesStatus && !canChangeSalesStatus(user.role)) {
-      throw new PermissionError("You are not allowed to change sales status.");
+    if (!canChangeStatus(user.role)) {
+      throw new PermissionError("You are not allowed to change status.");
     }
-    if (input.fulfilmentStatus && !canChangeFulfilmentStatus(user.role)) {
-      throw new PermissionError(
-        "You are not allowed to change fulfilment status."
-      );
-    }
-    if (input.salesStatus) {
-      update.salesStatus = input.salesStatus as SalesStatus;
-    }
-    if (input.fulfilmentStatus) {
-      update.fulfilmentStatus = input.fulfilmentStatus as FulfilmentStatus;
-    }
+    update.status = input.status as LeadStatus;
     updated = await bulkUpdateLeads(input.leadIds, update);
   } else if (input.action === "change_priority") {
     update = { priority: input.priority as LeadPriority };
     updated = await bulkUpdateLeads(input.leadIds, update);
   } else if (input.action === "mark_spam") {
-    if (!canChangeSalesStatus(user.role)) {
+    if (!canChangeStatus(user.role)) {
       throw new PermissionError("You are not allowed to mark leads as spam.");
     }
-    update = { salesStatus: "spam_invalid" };
+    update = { status: "spam_invalid" };
     updated = await bulkUpdateLeads(input.leadIds, update);
   }
 
@@ -1212,7 +1030,7 @@ export async function deleteLeadForUser(
     previousValues: {
       leadNumber: lead.leadNumber,
       formCode: lead.formCode,
-      salesStatus: lead.salesStatus,
+      status: lead.status,
     },
   });
 }

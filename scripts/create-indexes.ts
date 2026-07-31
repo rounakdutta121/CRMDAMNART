@@ -14,8 +14,15 @@ async function main() {
   console.log("Indexes ensured.");
 
   const db = await getDb();
+  const existing = new Set(
+    (await db.listCollections().toArray()).map((entry) => entry.name)
+  );
   const collections = Object.values(COLLECTIONS);
   for (const name of collections) {
+    if (!existing.has(name)) {
+      console.log(`- ${name}: (absent)`);
+      continue;
+    }
     const indexes = await db.collection(name).indexes();
     console.log(`- ${name}: ${indexes.length} index(es)`);
   }

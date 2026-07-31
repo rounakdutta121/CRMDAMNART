@@ -1,6 +1,5 @@
 import {
-  FULFILMENT_STATUS_LABELS,
-  SALES_STATUS_LABELS,
+  LEAD_STATUS_LABELS,
   SOURCE_SYSTEM_LABELS,
 } from "@/lib/constants";
 import { resolveWebsiteFilter } from "@/lib/permissions";
@@ -11,11 +10,6 @@ import {
   getRecentLeads,
   type LeadListFilters,
 } from "@/repositories/leads.repository";
-import {
-  countFollowUpsDueToday,
-  countOverdueFollowUps,
-  getUpcomingFollowUps,
-} from "@/repositories/follow-ups.repository";
 import { listWebsites } from "@/repositories/websites.repository";
 import type { SessionUser } from "@/types/auth";
 
@@ -103,8 +97,6 @@ export async function getDashboardData(
     totalLeads,
     newLeadsToday,
     unassignedLeads,
-    followUpsDueToday,
-    overdueFollowUps,
     qualifiedLeads,
     confirmedLeads,
     convertedLeads,
@@ -113,7 +105,6 @@ export async function getDashboardData(
     byStatus,
     bySource,
     recentLeads,
-    upcomingFollowUps,
     websites,
   ] = await Promise.all([
     countLeads(baseFilters),
@@ -123,17 +114,14 @@ export async function getDashboardData(
       dateTo: endOfToday(),
     }),
     countLeads({ ...baseFilters, assignedUserId: "unassigned" }),
-    countFollowUpsDueToday(websiteIds ?? null),
-    countOverdueFollowUps(websiteIds ?? null),
-    countLeads({ ...baseFilters, salesStatus: "qualified" }),
-    countLeads({ ...baseFilters, salesStatus: "confirmed" }),
-    countLeads({ ...baseFilters, salesStatus: "converted" }),
-    countLeads({ ...baseFilters, salesStatus: "lost" }),
+    countLeads({ ...baseFilters, status: "qualified" }),
+    countLeads({ ...baseFilters, status: "confirmed" }),
+    countLeads({ ...baseFilters, status: "converted" }),
+    countLeads({ ...baseFilters, status: "lost" }),
     aggregateLeadsByField("websiteId", baseFilters),
-    aggregateLeadsByField("salesStatus", baseFilters),
+    aggregateLeadsByField("status", baseFilters),
     aggregateLeadsByField("sourceSystem", baseFilters),
     getRecentLeads(baseFilters, 5),
-    getUpcomingFollowUps(websiteIds ?? null, 5),
     listWebsites(websiteIds === null ? undefined : { ids: websiteIds }),
   ]);
 
@@ -152,18 +140,6 @@ export async function getDashboardData(
     })
   );
 
-  const upcomingWithMeta = await Promise.all(
-    upcomingFollowUps.map(async (followUp) => {
-      const contact = await findContactById(followUp.contactId.toHexString());
-      return {
-        followUp,
-        contactName: contact?.name ?? "Unknown",
-        websiteName:
-          websiteMap.get(followUp.websiteId.toHexString()) ?? "Unknown",
-      };
-    })
-  );
-
   const maxWebsiteCount = Math.max(1, ...byWebsite.map((row) => row.count));
   const maxStatusCount = Math.max(1, ...byStatus.map((row) => row.count));
   const maxSourceCount = Math.max(1, ...bySource.map((row) => row.count));
@@ -175,8 +151,8 @@ export async function getDashboardData(
       totalLeads,
       newLeadsToday,
       unassignedLeads,
-      followUpsDueToday,
-      overdueFollowUps,
+      followUpsDueToday: 0,
+      overdueFollowUps: 0,
       qualifiedLeads,
       confirmedLeads,
       convertedLeads,
@@ -201,7 +177,7 @@ export async function getDashboardData(
     })),
     byStatus: byStatus.map((row) => ({
       label:
-        SALES_STATUS_LABELS[row.key as keyof typeof SALES_STATUS_LABELS] ??
+        LEAD_STATUS_LABELS[row.key as keyof typeof LEAD_STATUS_LABELS] ??
         row.key,
       count: row.count,
       percent: Math.round((row.count / maxStatusCount) * 100),
@@ -214,8 +190,7 @@ export async function getDashboardData(
       percent: Math.round((row.count / maxSourceCount) * 100),
     })),
     recentLeads: recentWithContacts,
-    upcomingFollowUps: upcomingWithMeta,
-    fulfilmentLabels: FULFILMENT_STATUS_LABELS,
+    upcomingFollowUps: [],
     websites,
   };
 }

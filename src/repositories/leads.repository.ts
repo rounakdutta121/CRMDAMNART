@@ -13,32 +13,18 @@ export interface LeadListFilters {
   formId?: string;
   service?: string;
   serviceId?: string;
-  salesStatus?: string;
-  fulfilmentStatus?: string;
+  status?: string;
   priority?: string;
   sourceSystem?: string;
   assignedUserId?: string;
   dateFrom?: Date;
   dateTo?: Date;
-  followUpDue?: "today" | "overdue" | "upcoming";
   assignedUserOnly?: string;
   includeUnassigned?: boolean;
   excludeTestLeads?: boolean;
   leadIdsWithGclid?: ObjectId[];
   leadIdsMissingAttribution?: ObjectId[];
   contactIds?: ObjectId[];
-}
-
-function startOfDay(date: Date): Date {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function endOfDay(date: Date): Date {
-  const d = new Date(date);
-  d.setHours(23, 59, 59, 999);
-  return d;
 }
 
 function escapeRegex(value: string): string {
@@ -74,13 +60,8 @@ export function buildLeadFilter(filters: LeadListFilters): Filter<Lead> {
     filter.service = filters.service;
   }
 
-  if (filters.salesStatus) {
-    filter.salesStatus = filters.salesStatus as Lead["salesStatus"];
-  }
-
-  if (filters.fulfilmentStatus) {
-    filter.fulfilmentStatus =
-      filters.fulfilmentStatus as Lead["fulfilmentStatus"];
+  if (filters.status) {
+    filter.status = filters.status as Lead["status"];
   }
 
   if (filters.priority) {
@@ -105,21 +86,6 @@ export function buildLeadFilter(filters: LeadListFilters): Filter<Lead> {
     if (filters.dateTo) {
       filter.createdAt.$lte = filters.dateTo;
     }
-  }
-
-  if (filters.followUpDue === "today") {
-    const now = new Date();
-    filter.nextFollowUpAt = {
-      $gte: startOfDay(now),
-      $lte: endOfDay(now),
-    };
-  } else if (filters.followUpDue === "overdue") {
-    filter.nextFollowUpAt = { $lt: new Date() };
-    filter.salesStatus = {
-      $nin: ["converted", "lost", "duplicate", "spam_invalid"],
-    };
-  } else if (filters.followUpDue === "upcoming") {
-    filter.nextFollowUpAt = { $gt: endOfDay(new Date()) };
   }
 
   if (filters.assignedUserOnly) {
@@ -202,7 +168,6 @@ export async function deleteLeadRelatedRecords(leadId: string): Promise<void> {
   await Promise.all([
     db.collection(COLLECTIONS.leadActivities).deleteMany({ leadId: id }),
     db.collection(COLLECTIONS.leadAttributions).deleteMany({ leadId: id }),
-    db.collection(COLLECTIONS.followUps).deleteMany({ leadId: id }),
     db
       .collection(COLLECTIONS.leadAssignmentHistory)
       .deleteMany({ leadId: id }),
@@ -455,7 +420,7 @@ export async function reassignLeadsToContact(
 }
 
 export async function aggregateLeadsByField(
-  field: "websiteId" | "salesStatus" | "sourceSystem",
+  field: "websiteId" | "status" | "sourceSystem",
   filters: LeadListFilters = {}
 ): Promise<{ key: string; count: number }[]> {
   const db = await getDb();
@@ -593,7 +558,7 @@ export async function listOpenLeadIdsForUser(options: {
   const db = await getDb();
   const filter: Filter<Lead> = {
     assignedUserId: new ObjectId(options.userId),
-    salesStatus: {
+    status: {
       $nin: ["converted", "lost", "duplicate", "spam_invalid"],
     },
   };

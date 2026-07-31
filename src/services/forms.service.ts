@@ -293,11 +293,6 @@ export async function deactivateFormForUser(
   }
 
   assertCanAccessWebsite(user, existing.websiteId.toHexString());
-
-  if (!existing.isActive) {
-    return;
-  }
-
   await deleteForm(formId);
 
   await writeAuditLog({
@@ -306,8 +301,11 @@ export async function deactivateFormForUser(
     entityType: "integration",
     entityId: formId,
     websiteId: existing.websiteId.toHexString(),
-    previousValues: { isActive: existing.isActive, name: existing.name },
-    newValues: { isActive: false },
+    previousValues: {
+      name: existing.name,
+      code: existing.code,
+      isActive: existing.isActive,
+    },
   });
 }
 
@@ -356,7 +354,6 @@ export async function testFormSubmissionForUser(
       phone: mapped.contactData.phone,
       whatsapp: mapped.contactData.whatsapp,
       company: mapped.contactData.company,
-      jobTitle: mapped.contactData.jobTitle,
       country: mapped.contactData.country,
       state: mapped.contactData.state,
       city: mapped.contactData.city,
@@ -391,13 +388,10 @@ export async function testFormSubmissionForUser(
       sourceSystem: "manual",
       serviceId,
       service: serviceName,
-      serviceCategory: mapped.leadData.serviceCategory,
       message: mapped.leadData.message,
       assignedUserId,
-      salesStatus: assignedUserId ? "assigned" : "new",
-      fulfilmentStatus: "not_started",
+      status: assignedUserId ? "assigned" : "new",
       priority: mapped.leadData.priority ?? "normal",
-      leadValue: mapped.leadData.leadValue,
       currency:
         mapped.leadData.currency?.toUpperCase() ?? website.defaultCurrency,
       createdAt: now,

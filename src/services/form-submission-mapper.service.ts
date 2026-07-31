@@ -466,13 +466,6 @@ function setLeadValue(
   key: LeadDataKey,
   value: StoredFormValue
 ): void {
-  if (key === "leadValue") {
-    if (typeof value === "number") {
-      leadData.leadValue = value;
-    }
-    return;
-  }
-
   if (key === "priority") {
     if (typeof value === "string" && LEAD_PRIORITIES.includes(value as LeadPriority)) {
       leadData.priority = value as LeadPriority;

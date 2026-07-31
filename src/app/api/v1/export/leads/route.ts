@@ -25,9 +25,8 @@ export async function GET(request: NextRequest) {
     for (const key of [
       "websiteId",
       "service",
-      "salesStatus",
-      "fulfilmentStatus",
-      "priority",
+      "status",
+            "priority",
       "sourceSystem",
       "assignedUserId",
       "search",

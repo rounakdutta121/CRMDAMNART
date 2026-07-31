@@ -188,7 +188,7 @@ export function LeadImportWizard({
             <input type="hidden" name="mappings" value={JSON.stringify(mappings)} />
             <input type="hidden" name="rows" value={JSON.stringify(rowObjects)} />
             <select
-              name="defaultSalesStatus"
+              name="defaultStatus"
               defaultValue="new"
               className="h-10 rounded-md border border-[var(--border)] px-3 text-sm"
             >

@@ -9,7 +9,6 @@ export interface Contact {
   normalizedPhone?: string;
   whatsapp?: string;
   company?: string;
-  jobTitle?: string;
   country?: string;
   state?: string;
   city?: string;

@@ -11,12 +11,10 @@ import { SavedViewsDropdown } from "@/components/leads/saved-views-dropdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  FULFILMENT_STATUSES,
-  FULFILMENT_STATUS_LABELS,
   LEAD_PRIORITIES,
   LEAD_PRIORITY_LABELS,
-  SALES_STATUSES,
-  SALES_STATUS_LABELS,
+  LEAD_STATUSES,
+  LEAD_STATUS_LABELS,
   SOURCE_SYSTEMS,
   SOURCE_SYSTEM_LABELS,
 } from "@/lib/constants";
@@ -78,14 +76,12 @@ export default async function LeadsPage({
     search: getParam(params, "search"),
     websiteId: getParam(params, "websiteId"),
     formId: getParam(params, "formId"),
-    salesStatus: getParam(params, "salesStatus"),
-    fulfilmentStatus: getParam(params, "fulfilmentStatus"),
+    status: getParam(params, "status"),
     priority: getParam(params, "priority"),
     sourceSystem: getParam(params, "sourceSystem"),
     assignedUserId: getParam(params, "assignedUserId"),
     dateFrom: getParam(params, "dateFrom"),
     dateTo: getParam(params, "dateTo"),
-    followUpDue: getParam(params, "followUpDue"),
     hasGclid: getParam(params, "hasGclid"),
     missingAttribution: getParam(params, "missingAttribution"),
     service: getParam(params, "service"),
@@ -119,11 +115,9 @@ export default async function LeadsPage({
       phone: item.contact?.phone ?? "—",
       email: item.contact?.email ?? "—",
       sourceSystem: item.lead.sourceSystem,
-      salesStatus: item.lead.salesStatus,
-      fulfilmentStatus: item.lead.fulfilmentStatus,
+      status: item.lead.status,
       assigneeName: item.assignedUser?.name ?? "Unassigned",
       priority: item.lead.priority,
-      nextFollowUpAt: item.lead.nextFollowUpAt?.toISOString() ?? null,
       createdAt: item.lead.createdAt.toISOString(),
       dynamicValues,
     };
@@ -209,26 +203,14 @@ export default async function LeadsPage({
           defaultValue={filterValues.service}
         />
         <select
-          name="salesStatus"
-          defaultValue={filterValues.salesStatus ?? ""}
+          name="status"
+          defaultValue={filterValues.status ?? ""}
           className="h-10 rounded-md border border-[var(--border)] px-3 text-sm"
         >
-          <option value="">All sales statuses</option>
-          {SALES_STATUSES.map((status) => (
+          <option value="">All statuses</option>
+          {LEAD_STATUSES.map((status) => (
             <option key={status} value={status}>
-              {SALES_STATUS_LABELS[status]}
-            </option>
-          ))}
-        </select>
-        <select
-          name="fulfilmentStatus"
-          defaultValue={filterValues.fulfilmentStatus ?? ""}
-          className="h-10 rounded-md border border-[var(--border)] px-3 text-sm"
-        >
-          <option value="">All fulfilment statuses</option>
-          {FULFILMENT_STATUSES.map((status) => (
-            <option key={status} value={status}>
-              {FULFILMENT_STATUS_LABELS[status]}
+              {LEAD_STATUS_LABELS[status]}
             </option>
           ))}
         </select>
@@ -281,16 +263,6 @@ export default async function LeadsPage({
           defaultValue={filterValues.dateTo}
           aria-label="To date"
         />
-        <select
-          name="followUpDue"
-          defaultValue={filterValues.followUpDue ?? ""}
-          className="h-10 rounded-md border border-[var(--border)] px-3 text-sm"
-        >
-          <option value="">Follow-up filter</option>
-          <option value="today">Due today</option>
-          <option value="overdue">Overdue</option>
-          <option value="upcoming">Upcoming</option>
-        </select>
         <select
           name="hasGclid"
           defaultValue={filterValues.hasGclid ?? ""}

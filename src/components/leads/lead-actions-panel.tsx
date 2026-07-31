@@ -3,9 +3,6 @@
 import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
 import {
-  addNoteAction,
-  contactAttemptAction,
-  scheduleFollowUpAction,
   updateContactAction,
   updateLeadAction,
   type ActionResult,
@@ -15,20 +12,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  FOLLOW_UP_METHODS,
-  FOLLOW_UP_METHOD_LABELS,
-  FULFILMENT_STATUSES,
-  FULFILMENT_STATUS_LABELS,
   LEAD_PRIORITIES,
   LEAD_PRIORITY_LABELS,
-  SALES_STATUSES,
-  SALES_STATUS_LABELS,
+  LEAD_STATUSES,
+  LEAD_STATUS_LABELS,
 } from "@/lib/constants";
-import type {
-  FulfilmentStatus,
-  LeadPriority,
-  SalesStatus,
-} from "@/types/lead";
+import type { LeadPriority, LeadStatus } from "@/types/lead";
 
 const initial: ActionResult = { success: false, message: "" };
 
@@ -36,16 +25,12 @@ export interface LeadActionsLead {
   id: string;
   websiteId: string;
   service?: string;
-  serviceCategory?: string;
   formName?: string;
   message?: string;
-  salesStatus: SalesStatus;
-  fulfilmentStatus: FulfilmentStatus;
+  status: LeadStatus;
   priority: LeadPriority;
-  leadValue?: number;
   currency: string;
   assignedUserId?: string;
-  lostReason?: string;
 }
 
 export interface LeadActionsContact {
@@ -55,7 +40,6 @@ export interface LeadActionsContact {
   phone?: string;
   whatsapp?: string;
   company?: string;
-  jobTitle?: string;
   country?: string;
   state?: string;
   city?: string;
@@ -79,18 +63,14 @@ export function LeadActionsPanel({
   contact,
   users,
   canEdit,
-  canNote,
-  canSales,
-  canFulfilment,
+  canChangeStatus,
   canAssign,
 }: {
   lead: LeadActionsLead;
   contact: LeadActionsContact;
   users: LeadActionsUser[];
   canEdit: boolean;
-  canNote: boolean;
-  canSales: boolean;
-  canFulfilment: boolean;
+  canChangeStatus: boolean;
   canAssign: boolean;
 }) {
   const leadId = lead.id;
@@ -101,30 +81,15 @@ export function LeadActionsPanel({
     leadId,
     lead.websiteId
   );
-  const addNote = addNoteAction.bind(null, leadId);
-  const contactAttempt = contactAttemptAction.bind(null, leadId);
-  const schedule = scheduleFollowUpAction.bind(null, leadId);
 
   const [leadState, leadAction, leadPending] = useActionState(updateLead, initial);
   const [contactState, contactAction, contactPending] = useActionState(
     updateContact,
     initial
   );
-  const [noteState, noteAction, notePending] = useActionState(addNote, initial);
-  const [attemptState, attemptAction, attemptPending] = useActionState(
-    contactAttempt,
-    initial
-  );
-  const [followState, followAction, followPending] = useActionState(
-    schedule,
-    initial
-  );
 
   useActionToast(leadState);
   useActionToast(contactState);
-  useActionToast(noteState);
-  useActionToast(attemptState);
-  useActionToast(followState);
 
   return (
     <div className="space-y-6">
@@ -148,11 +113,6 @@ export function LeadActionsPanel({
               defaultValue={contact.company ?? ""}
             />
             <Field
-              label="Job title"
-              name="jobTitle"
-              defaultValue={contact.jobTitle ?? ""}
-            />
-            <Field
               label="Country"
               name="country"
               defaultValue={contact.country ?? ""}
@@ -168,7 +128,7 @@ export function LeadActionsPanel({
         </section>
       ) : null}
 
-      {canEdit || canSales || canFulfilment || canAssign ? (
+      {canEdit || canChangeStatus || canAssign ? (
         <section className="border border-[var(--border)] bg-[var(--surface-elevated)] p-4">
           <h3 className="mb-3 text-sm font-semibold text-[var(--ink)]">
             Update lead
@@ -180,22 +140,9 @@ export function LeadActionsPanel({
               defaultValue={lead.service ?? ""}
             />
             <Field
-              label="Service category"
-              name="serviceCategory"
-              defaultValue={lead.serviceCategory ?? ""}
-            />
-            <Field
               label="Form name"
               name="formName"
               defaultValue={lead.formName ?? ""}
-            />
-            <Field
-              label="Lead value"
-              name="leadValue"
-              type="number"
-              defaultValue={
-                lead.leadValue !== undefined ? String(lead.leadValue) : ""
-              }
             />
             <Field
               label="Currency"
@@ -220,35 +167,18 @@ export function LeadActionsPanel({
                 </select>
               </div>
             ) : null}
-            {canSales ? (
+            {canChangeStatus ? (
               <div className="space-y-1">
-                <Label htmlFor="salesStatus">Sales status</Label>
+                <Label htmlFor="status">Status</Label>
                 <select
-                  id="salesStatus"
-                  name="salesStatus"
-                  defaultValue={lead.salesStatus}
+                  id="status"
+                  name="status"
+                  defaultValue={lead.status}
                   className="h-10 w-full rounded-md border border-[var(--border)] px-3 text-sm"
                 >
-                  {SALES_STATUSES.map((status) => (
+                  {LEAD_STATUSES.map((status) => (
                     <option key={status} value={status}>
-                      {SALES_STATUS_LABELS[status]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : null}
-            {canFulfilment ? (
-              <div className="space-y-1">
-                <Label htmlFor="fulfilmentStatus">Fulfilment status</Label>
-                <select
-                  id="fulfilmentStatus"
-                  name="fulfilmentStatus"
-                  defaultValue={lead.fulfilmentStatus}
-                  className="h-10 w-full rounded-md border border-[var(--border)] px-3 text-sm"
-                >
-                  {FULFILMENT_STATUSES.map((status) => (
-                    <option key={status} value={status}>
-                      {FULFILMENT_STATUS_LABELS[status]}
+                      {LEAD_STATUS_LABELS[status]}
                     </option>
                   ))}
                 </select>
@@ -269,11 +199,6 @@ export function LeadActionsPanel({
                 ))}
               </select>
             </div>
-            <Field
-              label="Lost reason"
-              name="lostReason"
-              defaultValue={lead.lostReason ?? ""}
-            />
             <div className="space-y-1 sm:col-span-2">
               <Label htmlFor="message">Message</Label>
               <Textarea
@@ -290,100 +215,6 @@ export function LeadActionsPanel({
             </div>
           </form>
         </section>
-      ) : null}
-
-      {canNote ? (
-        <>
-          <section className="border border-[var(--border)] bg-[var(--surface-elevated)] p-4">
-            <h3 className="mb-3 text-sm font-semibold text-[var(--ink)]">Add note</h3>
-            <form action={noteAction} className="space-y-3">
-              <Textarea id="note" name="note" required rows={3} />
-              <Button type="submit" disabled={notePending}>
-                {notePending ? "Saving…" : "Add note"}
-              </Button>
-            </form>
-          </section>
-
-          <section className="border border-[var(--border)] bg-[var(--surface-elevated)] p-4">
-            <h3 className="mb-3 text-sm font-semibold text-[var(--ink)]">
-              Log contact attempt
-            </h3>
-            <form action={attemptAction} className="space-y-3">
-              <div className="space-y-1">
-                <Label htmlFor="method">Method</Label>
-                <select
-                  id="method"
-                  name="method"
-                  defaultValue="call"
-                  className="h-10 w-full rounded-md border border-[var(--border)] px-3 text-sm"
-                >
-                  {FOLLOW_UP_METHODS.map((method) => (
-                    <option key={method} value={method}>
-                      {FOLLOW_UP_METHOD_LABELS[method]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <Textarea id="note" name="note" rows={2} placeholder="Optional note" />
-              <Button type="submit" disabled={attemptPending}>
-                {attemptPending ? "Saving…" : "Log attempt"}
-              </Button>
-            </form>
-          </section>
-
-          <section className="border border-[var(--border)] bg-[var(--surface-elevated)] p-4">
-            <h3 className="mb-3 text-sm font-semibold text-[var(--ink)]">
-              Schedule follow-up
-            </h3>
-            <form action={followAction} className="space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <Label htmlFor="follow-method">Method</Label>
-                  <select
-                    id="follow-method"
-                    name="method"
-                    defaultValue="call"
-                    className="h-10 w-full rounded-md border border-[var(--border)] px-3 text-sm"
-                  >
-                    {FOLLOW_UP_METHODS.map((method) => (
-                      <option key={method} value={method}>
-                        {FOLLOW_UP_METHOD_LABELS[method]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="scheduledAt">Scheduled at</Label>
-                  <Input
-                    id="scheduledAt"
-                    name="scheduledAt"
-                    type="datetime-local"
-                    required
-                  />
-                </div>
-                <div className="space-y-1 sm:col-span-2">
-                  <Label htmlFor="follow-assignedUserId">Assignee</Label>
-                  <select
-                    id="follow-assignedUserId"
-                    name="assignedUserId"
-                    className="h-10 w-full rounded-md border border-[var(--border)] px-3 text-sm"
-                  >
-                    <option value="">Me</option>
-                    {users.map((assignee) => (
-                      <option key={assignee.id} value={assignee.id}>
-                        {assignee.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <Textarea id="note" name="note" rows={2} placeholder="Optional note" />
-              <Button type="submit" disabled={followPending}>
-                {followPending ? "Scheduling…" : "Schedule follow-up"}
-              </Button>
-            </form>
-          </section>
-        </>
       ) : null}
     </div>
   );

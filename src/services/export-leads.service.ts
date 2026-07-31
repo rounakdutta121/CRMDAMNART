@@ -1,8 +1,7 @@
 import {
-  FULFILMENT_STATUS_LABELS,
   LEAD_PRIORITY_LABELS,
+  LEAD_STATUS_LABELS,
   MAX_EXPORT_ROWS,
-  SALES_STATUS_LABELS,
   SOURCE_SYSTEM_LABELS,
 } from "@/lib/constants";
 import { toCsv } from "@/lib/csv";
@@ -31,13 +30,10 @@ const BASE_HEADERS = [
   "website",
   "service",
   "source",
-  "salesStatus",
-  "fulfilmentStatus",
+  "status",
   "priority",
   "assignee",
-  "leadValue",
   "currency",
-  "nextFollowUpAt",
   "createdAt",
 ];
 
@@ -80,8 +76,7 @@ export async function exportLeadsToCsv(
         websiteIds,
         websiteId: get("websiteId"),
         service: get("service"),
-        salesStatus: get("salesStatus"),
-        fulfilmentStatus: get("fulfilmentStatus"),
+        status: get("status"),
         priority: get("priority"),
         sourceSystem: get("sourceSystem"),
         assignedUserId: get("assignedUserId"),
@@ -135,13 +130,10 @@ export async function exportLeadsToCsv(
       website?.name ?? "",
       lead.service ?? "",
       SOURCE_SYSTEM_LABELS[lead.sourceSystem],
-      SALES_STATUS_LABELS[lead.salesStatus],
-      FULFILMENT_STATUS_LABELS[lead.fulfilmentStatus],
+      LEAD_STATUS_LABELS[lead.status],
       LEAD_PRIORITY_LABELS[lead.priority],
       assignee?.name ?? "",
-      lead.leadValue !== undefined ? String(lead.leadValue) : "",
       lead.currency,
-      lead.nextFollowUpAt?.toISOString() ?? "",
       lead.createdAt.toISOString(),
     ];
 

@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeleteEntityButton } from "@/components/shared/delete-entity-button";
-import { deleteFormAction } from "@/app/actions";
+import { RenameEntityButton } from "@/components/shared/rename-entity-button";
+import { deleteFormAction, renameFormAction } from "@/app/actions";
 import { requireSession } from "@/lib/auth";
 import { canManageForms } from "@/lib/permissions";
 import {
@@ -74,6 +75,11 @@ export default async function WebsiteFormDetailPage({
         <div className="flex flex-wrap gap-2">
           {canManageForms(user.role) ? (
             <>
+              <RenameEntityButton
+                currentName={form.name}
+                entityLabel="form name"
+                action={renameFormAction.bind(null, websiteId, formId)}
+              />
               <Button asChild variant="outline">
                 <Link href={`/websites/${websiteId}/forms/${formId}/edit`}>
                   Edit fields
@@ -84,14 +90,12 @@ export default async function WebsiteFormDetailPage({
                   Test submission
                 </Link>
               </Button>
-              {form.isActive ? (
-                <DeleteEntityButton
+              <DeleteEntityButton
                   label="Delete form"
-                  confirmMessage={`Delete form "${form.name}"? It will be deactivated and stop accepting submissions.`}
+                  confirmMessage={`Permanently delete form "${form.name}"? This cannot be undone.`}
                   redirectTo={`/websites/${websiteId}/forms`}
                   action={deleteFormAction.bind(null, websiteId, formId)}
                 />
-              ) : null}
             </>
           ) : null}
         </div>

@@ -59,17 +59,12 @@ export async function ensureIndexes(): Promise<void> {
   await db.collection(COLLECTIONS.leads).createIndexes([
     { key: { leadNumber: 1 }, unique: true, name: "leads_leadNumber_unique" },
     { key: { websiteId: 1, createdAt: -1 }, name: "leads_websiteId_createdAt" },
-    { key: { websiteId: 1, salesStatus: 1 }, name: "leads_websiteId_salesStatus" },
-    {
-      key: { websiteId: 1, fulfilmentStatus: 1 },
-      name: "leads_websiteId_fulfilmentStatus",
-    },
+    { key: { websiteId: 1, status: 1 }, name: "leads_websiteId_status" },
     {
       key: { assignedUserId: 1, createdAt: -1 },
       name: "leads_assignedUserId_createdAt",
     },
     { key: { contactId: 1, createdAt: -1 }, name: "leads_contactId_createdAt" },
-    { key: { nextFollowUpAt: 1 }, name: "leads_nextFollowUpAt" },
     {
       key: { isTestLead: 1, createdAt: -1 },
       name: "leads_isTestLead_createdAt",
@@ -90,8 +85,8 @@ export async function ensureIndexes(): Promise<void> {
     { key: { formId: 1, createdAt: -1 }, name: "leads_formId_createdAt" },
     { key: { serviceId: 1, createdAt: -1 }, name: "leads_serviceId_createdAt" },
     {
-      key: { assignedUserId: 1, salesStatus: 1 },
-      name: "leads_assignedUserId_salesStatus",
+      key: { assignedUserId: 1, status: 1 },
+      name: "leads_assignedUserId_status",
     },
   ]);
 
@@ -142,14 +137,26 @@ export async function ensureIndexes(): Promise<void> {
     },
   ]);
 
-  await db.collection(COLLECTIONS.followUps).createIndexes([
-    {
-      key: { assignedUserId: 1, scheduledAt: 1 },
-      name: "followUps_assignedUserId_scheduledAt",
-    },
-    { key: { leadId: 1, scheduledAt: 1 }, name: "followUps_leadId_scheduledAt" },
-    { key: { status: 1, scheduledAt: 1 }, name: "followUps_status_scheduledAt" },
-  ]);
+  // Drop obsolete follow-ups collection if present (feature removed).
+  try {
+    await db.collection(COLLECTIONS.followUps).drop();
+  } catch {
+    // Collection may already be absent.
+  }
+
+  // Drop legacy lead indexes renamed away from sales/fulfilment/follow-up fields.
+  for (const name of [
+    "leads_websiteId_salesStatus",
+    "leads_websiteId_fulfilmentStatus",
+    "leads_assignedUserId_salesStatus",
+    "leads_nextFollowUpAt",
+  ]) {
+    try {
+      await db.collection(COLLECTIONS.leads).dropIndex(name);
+    } catch {
+      // Index may already be absent.
+    }
+  }
 
   await db.collection(COLLECTIONS.conversionEvents).createIndexes([
     {

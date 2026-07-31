@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { notFound } from "next/navigation";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { PageHeader } from "@/components/shared/page-header";
-import { SalesStatusBadge } from "@/components/shared/status-badges";
+import { LeadStatusBadge } from "@/components/shared/status-badges";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireSession } from "@/lib/auth";
 import { getContactDetail } from "@/services/contacts.service";
@@ -45,7 +45,6 @@ export default async function ContactDetailPage({
             <p>Phone: {contact.phone ?? "—"}</p>
             <p>WhatsApp: {contact.whatsapp ?? "—"}</p>
             <p>Company: {contact.company ?? "—"}</p>
-            <p>Job title: {contact.jobTitle ?? "—"}</p>
             <p>
               Location:{" "}
               {[contact.city, contact.state, contact.country]
@@ -76,7 +75,7 @@ export default async function ContactDetailPage({
                       {format(lead.createdAt, "dd MMM yyyy")}
                     </p>
                   </div>
-                  <SalesStatusBadge status={lead.salesStatus} />
+                  <LeadStatusBadge status={lead.status} />
                 </Link>
               ))
             )}

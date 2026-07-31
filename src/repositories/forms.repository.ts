@@ -82,15 +82,13 @@ export async function updateForm(
 
 export async function deleteForm(id: string): Promise<void> {
   const db = await getDb();
-  await db.collection<WebsiteForm>(COLLECTIONS.websiteForms).updateOne(
-    { _id: new ObjectId(id) },
-    {
-      $set: {
-        isActive: false,
-        updatedAt: new Date(),
-      },
-    }
-  );
+  const result = await db
+    .collection<WebsiteForm>(COLLECTIONS.websiteForms)
+    .deleteOne({ _id: new ObjectId(id) });
+
+  if (result.deletedCount !== 1) {
+    throw new Error("Form not found.");
+  }
 }
 
 export async function findLegacyDefaultForm(

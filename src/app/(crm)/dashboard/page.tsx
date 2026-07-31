@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { PageHeader } from "@/components/shared/page-header";
 import { ArchivePanel, MetricStrip, ReportSection } from "@/components/shared/archive";
-import { SalesStatusBadge } from "@/components/shared/status-badges";
+import { LeadStatusBadge } from "@/components/shared/status-badges";
 import { DashboardFilters } from "@/components/dashboard/dashboard-filters";
 import { requireSession } from "@/lib/auth";
 import { getDashboardData } from "@/services/dashboard.service";
@@ -63,7 +63,7 @@ export default async function DashboardPage({
       <PageHeader
         eyebrow="Lead operations report"
         title="Operations desk"
-        description="Live pipeline and follow-up metrics for your permitted websites."
+        description="Live pipeline metrics for your permitted websites."
         period={`As of ${periodLabel}`}
       />
 
@@ -85,14 +85,9 @@ export default async function DashboardPage({
             href: "/leads?assignedUserId=unassigned",
           },
           {
-            label: "Due today",
-            value: data.stats.followUpsDueToday,
-            href: "/follow-ups?status=pending",
-          },
-          {
-            label: "Overdue",
-            value: data.stats.overdueFollowUps,
-            href: "/follow-ups?status=overdue",
+            label: "Converted",
+            value: data.stats.convertedLeads,
+            href: "/leads?status=converted",
           },
         ]}
       />
@@ -102,22 +97,22 @@ export default async function DashboardPage({
           {
             label: "Qualified",
             value: data.stats.qualifiedLeads,
-            href: "/leads?salesStatus=qualified",
+            href: "/leads?status=qualified",
           },
           {
             label: "Confirmed",
             value: data.stats.confirmedLeads,
-            href: "/leads?salesStatus=confirmed",
+            href: "/leads?status=confirmed",
           },
           {
             label: "Converted",
             value: data.stats.convertedLeads,
-            href: "/leads?salesStatus=converted",
+            href: "/leads?status=converted",
           },
           {
             label: "Lost",
             value: data.stats.lostLeads,
-            href: "/leads?salesStatus=lost",
+            href: "/leads?status=lost",
           },
         ].map((item) => (
           <Link
@@ -141,66 +136,33 @@ export default async function DashboardPage({
         <BarList title="By source" number="03 / Capture" rows={data.bySource} />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <ArchivePanel>
-          <ReportSection number="04 / Recent" title="Recent lead records">
-            {data.recentLeads.length === 0 ? (
-              <p className="text-sm text-[var(--ink-muted)]">No leads yet.</p>
-            ) : (
-              <div className="divide-y divide-[var(--border)]">
-                {data.recentLeads.map((item) => (
-                  <Link
-                    key={item.lead._id.toHexString()}
-                    href={`/leads/${item.lead._id.toHexString()}`}
-                    className="flex items-center justify-between gap-3 py-3 transition-colors hover:bg-[var(--surface)]"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-[var(--ink)]">
-                        {item.contactName}
-                      </p>
-                      <p className="font-mono-id text-xs text-[var(--ink-subtle)]">
-                        {item.lead.leadNumber} · {item.websiteName}
-                      </p>
-                    </div>
-                    <SalesStatusBadge status={item.lead.salesStatus} />
-                  </Link>
-                ))}
-              </div>
-            )}
-          </ReportSection>
-        </ArchivePanel>
-
-        <ArchivePanel>
-          <ReportSection number="05 / Schedule" title="Upcoming follow-ups">
-            {data.upcomingFollowUps.length === 0 ? (
-              <p className="text-sm text-[var(--ink-muted)]">
-                No upcoming follow-ups.
-              </p>
-            ) : (
-              <div className="divide-y divide-[var(--border)]">
-                {data.upcomingFollowUps.map((item) => (
-                  <div
-                    key={item.followUp._id.toHexString()}
-                    className="flex items-center justify-between gap-3 py-3"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-[var(--ink)]">
-                        {item.contactName}
-                      </p>
-                      <p className="text-xs text-[var(--ink-subtle)]">
-                        {item.websiteName} · {item.followUp.method}
-                      </p>
-                    </div>
-                    <p className="font-mono-id shrink-0 text-xs text-[var(--ink-muted)]">
-                      {format(item.followUp.scheduledAt, "dd MMM yyyy HH:mm")}
+      <ArchivePanel>
+        <ReportSection number="04 / Recent" title="Recent lead records">
+          {data.recentLeads.length === 0 ? (
+            <p className="text-sm text-[var(--ink-muted)]">No leads yet.</p>
+          ) : (
+            <div className="divide-y divide-[var(--border)]">
+              {data.recentLeads.map((item) => (
+                <Link
+                  key={item.lead._id.toHexString()}
+                  href={`/leads/${item.lead._id.toHexString()}`}
+                  className="flex items-center justify-between gap-3 py-3 transition-colors hover:bg-[var(--surface)]"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-[var(--ink)]">
+                      {item.contactName}
+                    </p>
+                    <p className="font-mono-id text-xs text-[var(--ink-subtle)]">
+                      {item.lead.leadNumber} · {item.websiteName}
                     </p>
                   </div>
-                ))}
-              </div>
-            )}
-          </ReportSection>
-        </ArchivePanel>
-      </div>
+                  <LeadStatusBadge status={item.lead.status} />
+                </Link>
+              ))}
+            </div>
+          )}
+        </ReportSection>
+      </ArchivePanel>
     </div>
   );
 }

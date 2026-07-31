@@ -37,7 +37,6 @@ export async function findOrCreateContact(input: {
   phone?: string;
   whatsapp?: string;
   company?: string;
-  jobTitle?: string;
   country?: string;
   state?: string;
   city?: string;
@@ -46,6 +45,12 @@ export async function findOrCreateContact(input: {
   const phone = normalizeOptionalString(input.phone);
   const normalizedEmail = email ? normalizeEmail(email) : undefined;
   const normalizedPhone = phone ? normalizePhone(phone) : undefined;
+  const name = input.name.trim();
+  const whatsapp = normalizeOptionalString(input.whatsapp);
+  const company = normalizeOptionalString(input.company);
+  const country = normalizeOptionalString(input.country);
+  const state = normalizeOptionalString(input.state);
+  const city = normalizeOptionalString(input.city);
 
   const existing = await findPossibleContact({
     normalizedEmail,
@@ -53,22 +58,59 @@ export async function findOrCreateContact(input: {
   });
 
   if (existing) {
+    // Returning submissions can change identity fields. Optional profile
+    // fields (company/geo) are only updated when the submission includes them.
+    const update: Partial<Omit<Contact, "_id" | "createdAt">> = {};
+
+    if (name && name !== existing.name) {
+      update.name = name;
+      update.searchName = name.toLowerCase();
+    }
+    if (email && email !== existing.email) {
+      update.email = email;
+      update.normalizedEmail = normalizedEmail;
+    }
+    if (phone && phone !== existing.phone) {
+      update.phone = phone;
+      update.normalizedPhone = normalizedPhone;
+    }
+    if (whatsapp && whatsapp !== existing.whatsapp) {
+      update.whatsapp = whatsapp;
+    }
+    if (company !== undefined && company !== existing.company) {
+      update.company = company;
+      update.searchCompany = company.toLowerCase();
+    }
+    if (country !== undefined && country !== existing.country) {
+      update.country = country;
+    }
+    if (state !== undefined && state !== existing.state) {
+      update.state = state;
+    }
+    if (city !== undefined && city !== existing.city) {
+      update.city = city;
+    }
+
+    if (Object.keys(update).length > 0) {
+      await updateContact(existing._id.toHexString(), update);
+      const refreshed = await findContactById(existing._id.toHexString());
+      return { contact: refreshed ?? { ...existing, ...update }, created: false };
+    }
+
     return { contact: existing, created: false };
   }
 
   const now = new Date();
   const contact = await createContact({
-    name: input.name.trim(),
-    email,
-    normalizedEmail,
-    phone,
-    normalizedPhone,
-    whatsapp: normalizeOptionalString(input.whatsapp),
-    company: normalizeOptionalString(input.company),
-    jobTitle: normalizeOptionalString(input.jobTitle),
-    country: normalizeOptionalString(input.country),
-    state: normalizeOptionalString(input.state),
-    city: normalizeOptionalString(input.city),
+    name,
+    ...(email ? { email, normalizedEmail } : {}),
+    ...(phone ? { phone, normalizedPhone } : {}),
+    ...(whatsapp ? { whatsapp } : {}),
+    ...(company ? { company, searchCompany: company.toLowerCase() } : {}),
+    ...(country ? { country } : {}),
+    ...(state ? { state } : {}),
+    ...(city ? { city } : {}),
+    searchName: name.toLowerCase(),
     createdAt: now,
     updatedAt: now,
   });
@@ -146,7 +188,6 @@ export async function updateContactForUser(
     normalizedPhone: phone ? normalizePhone(phone) : undefined,
     whatsapp: normalizeOptionalString(input.whatsapp),
     company: normalizeOptionalString(input.company),
-    jobTitle: normalizeOptionalString(input.jobTitle),
     country: normalizeOptionalString(input.country),
     state: normalizeOptionalString(input.state),
     city: normalizeOptionalString(input.city),
@@ -236,7 +277,6 @@ export async function mergeContactsForUser(
           normalizedPhone: secondary.normalizedPhone,
           whatsapp: secondary.whatsapp,
           company: secondary.company,
-          jobTitle: secondary.jobTitle,
           country: secondary.country,
           state: secondary.state,
           city: secondary.city,

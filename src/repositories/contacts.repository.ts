@@ -181,7 +181,6 @@ export async function markContactMerged(options: {
       | "normalizedPhone"
       | "whatsapp"
       | "company"
-      | "jobTitle"
       | "country"
       | "state"
       | "city"

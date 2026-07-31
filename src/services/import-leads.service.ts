@@ -13,7 +13,7 @@ import { createLead } from "@/repositories/leads.repository";
 import { findWebsiteById } from "@/repositories/websites.repository";
 import { findOrCreateContact } from "@/services/contacts.service";
 import type { SessionUser } from "@/types/auth";
-import type { LeadPriority, SalesStatus } from "@/types/lead";
+import type { LeadPriority, LeadStatus } from "@/types/lead";
 
 function mapRow(
   row: Record<string, string>,
@@ -73,7 +73,6 @@ export async function importLeadsFromMappedRows(
         phone: mapped.phone,
         whatsapp: mapped.whatsapp,
         company: mapped.company,
-        jobTitle: mapped.jobTitle,
         country: mapped.country,
         state: mapped.state,
         city: mapped.city,
@@ -81,23 +80,16 @@ export async function importLeadsFromMappedRows(
 
       const now = new Date();
       const leadNumber = await generateLeadNumber(now.getFullYear());
-      const leadValue = mapped.leadValue
-        ? Number.parseFloat(mapped.leadValue)
-        : undefined;
-
       const lead = await createLead({
         leadNumber,
         contactId: contact._id,
         websiteId: website._id,
         sourceSystem: "import",
         service,
-        serviceCategory: normalizeOptionalString(mapped.serviceCategory),
         message: normalizeOptionalString(mapped.message),
         assignedUserId: website.defaultLeadOwnerId,
-        salesStatus: (mapped.salesStatus as SalesStatus) ?? input.defaultSalesStatus,
-        fulfilmentStatus: "not_started",
+        status: (mapped.status as LeadStatus) ?? input.defaultStatus,
         priority: (mapped.priority as LeadPriority) ?? input.defaultPriority,
-        leadValue: Number.isFinite(leadValue) ? leadValue : undefined,
         currency: mapped.currency?.toUpperCase() ?? website.defaultCurrency,
         createdAt: now,
         updatedAt: now,

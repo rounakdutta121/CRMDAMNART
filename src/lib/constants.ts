@@ -1,8 +1,7 @@
 import type { UserRole } from "@/types/auth";
 import type {
-  FulfilmentStatus,
   LeadPriority,
-  SalesStatus,
+  LeadStatus,
   SourceSystem,
 } from "@/types/lead";
 import type { FollowUpMethod, FollowUpStatus } from "@/types/follow-up";
@@ -109,7 +108,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   viewer: "Viewer",
 };
 
-export const SALES_STATUSES: SalesStatus[] = [
+export const LEAD_STATUSES: LeadStatus[] = [
   "new",
   "assigned",
   "contact_attempted",
@@ -126,7 +125,7 @@ export const SALES_STATUSES: SalesStatus[] = [
   "spam_invalid",
 ];
 
-export const SALES_STATUS_LABELS: Record<SalesStatus, string> = {
+export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
   new: "New",
   assigned: "Assigned",
   contact_attempted: "Contact Attempted",
@@ -143,25 +142,10 @@ export const SALES_STATUS_LABELS: Record<SalesStatus, string> = {
   spam_invalid: "Spam / Invalid",
 };
 
-export const FULFILMENT_STATUSES: FulfilmentStatus[] = [
-  "not_started",
-  "onboarding",
-  "in_progress",
-  "completed",
-  "deliverables_sent",
-  "cancelled",
-  "refunded",
-];
-
-export const FULFILMENT_STATUS_LABELS: Record<FulfilmentStatus, string> = {
-  not_started: "Not Started",
-  onboarding: "Onboarding",
-  in_progress: "In Progress",
-  completed: "Completed",
-  deliverables_sent: "Deliverables Sent",
-  cancelled: "Cancelled",
-  refunded: "Refunded",
-};
+/** @deprecated Use LEAD_STATUSES */
+export const SALES_STATUSES = LEAD_STATUSES;
+/** @deprecated Use LEAD_STATUS_LABELS */
+export const SALES_STATUS_LABELS = LEAD_STATUS_LABELS;
 
 export const LEAD_PRIORITIES: LeadPriority[] = [
   "low",

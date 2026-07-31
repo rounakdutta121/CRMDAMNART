@@ -1,19 +1,13 @@
 import { Badge } from "@/components/ui/badge";
 import {
-  FULFILMENT_STATUS_LABELS,
   LEAD_PRIORITY_LABELS,
-  SALES_STATUS_LABELS,
+  LEAD_STATUS_LABELS,
   SOURCE_SYSTEM_LABELS,
 } from "@/lib/constants";
-import type {
-  FulfilmentStatus,
-  LeadPriority,
-  SalesStatus,
-  SourceSystem,
-} from "@/types/lead";
+import type { LeadPriority, LeadStatus, SourceSystem } from "@/types/lead";
 
-const salesVariant: Record<
-  SalesStatus,
+const statusVariant: Record<
+  LeadStatus,
   "secondary" | "info" | "success" | "warning" | "danger" | "default" | "active"
 > = {
   new: "info",
@@ -42,20 +36,15 @@ const priorityVariant: Record<
   urgent: "danger",
 };
 
-export function SalesStatusBadge({ status }: { status: SalesStatus }) {
+export function LeadStatusBadge({ status }: { status: LeadStatus }) {
   return (
-    <Badge variant={salesVariant[status]}>{SALES_STATUS_LABELS[status]}</Badge>
+    <Badge variant={statusVariant[status]}>{LEAD_STATUS_LABELS[status]}</Badge>
   );
 }
 
-export function FulfilmentStatusBadge({
-  status,
-}: {
-  status: FulfilmentStatus;
-}) {
-  return (
-    <Badge variant="outline">{FULFILMENT_STATUS_LABELS[status]}</Badge>
-  );
+/** @deprecated Use LeadStatusBadge */
+export function SalesStatusBadge({ status }: { status: LeadStatus }) {
+  return <LeadStatusBadge status={status} />;
 }
 
 export function PriorityBadge({ priority }: { priority: LeadPriority }) {

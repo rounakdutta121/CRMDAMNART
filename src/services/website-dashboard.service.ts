@@ -1,6 +1,5 @@
 import {
-  FULFILMENT_STATUS_LABELS,
-  SALES_STATUS_LABELS,
+  LEAD_STATUS_LABELS,
   SOURCE_SYSTEM_LABELS,
 } from "@/lib/constants";
 import {
@@ -13,11 +12,6 @@ import {
   getRecentLeads,
   type LeadListFilters,
 } from "@/repositories/leads.repository";
-import {
-  countFollowUpsDueToday,
-  countOverdueFollowUps,
-  getUpcomingFollowUps,
-} from "@/repositories/follow-ups.repository";
 import { findContactById } from "@/repositories/contacts.repository";
 import { findWebsiteById } from "@/repositories/websites.repository";
 import type { SessionUser } from "@/types/auth";
@@ -87,14 +81,11 @@ export async function getWebsiteDashboardData(
     totalLeads,
     newLeadsToday,
     unassignedLeads,
-    followUpsDueToday,
-    overdueFollowUps,
     qualifiedLeads,
     convertedLeads,
     byStatus,
     bySource,
     recentLeads,
-    upcomingFollowUps,
   ] = await Promise.all([
     countLeads(baseFilters),
     countLeads({
@@ -103,14 +94,11 @@ export async function getWebsiteDashboardData(
       dateTo: endOfToday(),
     }),
     countLeads({ ...baseFilters, assignedUserId: "unassigned" }),
-    countFollowUpsDueToday(websiteIds),
-    countOverdueFollowUps(websiteIds),
-    countLeads({ ...baseFilters, salesStatus: "qualified" }),
-    countLeads({ ...baseFilters, salesStatus: "converted" }),
-    aggregateLeadsByField("salesStatus", baseFilters),
+    countLeads({ ...baseFilters, status: "qualified" }),
+    countLeads({ ...baseFilters, status: "converted" }),
+    aggregateLeadsByField("status", baseFilters),
     aggregateLeadsByField("sourceSystem", baseFilters),
     getRecentLeads(baseFilters, 8),
-    getUpcomingFollowUps(websiteIds, 8),
   ]);
 
   const recentWithContacts = await Promise.all(
@@ -123,16 +111,6 @@ export async function getWebsiteDashboardData(
     })
   );
 
-  const upcomingWithMeta = await Promise.all(
-    upcomingFollowUps.map(async (followUp) => {
-      const contact = await findContactById(followUp.contactId.toHexString());
-      return {
-        followUp,
-        contactName: contact?.name ?? "Unknown",
-      };
-    })
-  );
-
   const maxStatusCount = Math.max(1, ...byStatus.map((row) => row.count));
   const maxSourceCount = Math.max(1, ...bySource.map((row) => row.count));
   const conversionRate =
@@ -140,6 +118,7 @@ export async function getWebsiteDashboardData(
 
   const { apiKeyHash: _apiKeyHash, ...safeWebsite } = website;
   void _apiKeyHash;
+  void websiteIds;
 
   const filters: DashboardFilterInput = {
     websiteId,
@@ -164,15 +143,15 @@ export async function getWebsiteDashboardData(
       totalLeads,
       newLeadsToday,
       unassignedLeads,
-      followUpsDueToday,
-      overdueFollowUps,
+      followUpsDueToday: 0,
+      overdueFollowUps: 0,
       qualifiedLeads,
       convertedLeads,
       conversionRate,
     },
     byStatus: byStatus.map((row) => ({
       label:
-        SALES_STATUS_LABELS[row.key as keyof typeof SALES_STATUS_LABELS] ??
+        LEAD_STATUS_LABELS[row.key as keyof typeof LEAD_STATUS_LABELS] ??
         row.key,
       count: row.count,
       percent: Math.round((row.count / maxStatusCount) * 100),
@@ -185,7 +164,9 @@ export async function getWebsiteDashboardData(
       percent: Math.round((row.count / maxSourceCount) * 100),
     })),
     recentLeads: recentWithContacts,
-    upcomingFollowUps: upcomingWithMeta,
-    fulfilmentLabels: FULFILMENT_STATUS_LABELS,
+    upcomingFollowUps: [] as Array<{
+      followUp: { _id: { toHexString(): string }; method: string; scheduledAt: Date };
+      contactName: string;
+    }>,
   };
 }

@@ -32,7 +32,6 @@ function pickPreservedFields(
     normalizedPhone: source.normalizedPhone,
     whatsapp: source.whatsapp,
     company: source.company,
-    jobTitle: source.jobTitle,
     country: source.country,
     state: source.state,
     city: source.city,

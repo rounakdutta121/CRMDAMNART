@@ -557,7 +557,6 @@ export async function ingestWebhookLead(
         phone: payload.phone,
         whatsapp: payload.whatsapp,
         company: payload.company,
-        jobTitle: payload.jobTitle,
         country: payload.country,
         state: payload.state,
         city: payload.city,
@@ -588,13 +587,10 @@ export async function ingestWebhookLead(
         serviceId: service?._id,
         service: normalizeOptionalString(payload.service) ?? service?.name,
         submittedServiceName: normalizeOptionalString(payload.service),
-        serviceCategory: normalizeOptionalString(payload.serviceCategory),
         message: normalizeOptionalString(payload.message),
         assignedUserId,
-        salesStatus: assignedUserId ? "assigned" : "new",
-        fulfilmentStatus: "not_started",
+        status: assignedUserId ? "assigned" : "new",
         priority: "normal",
-        leadValue: payload.leadValue ?? service?.defaultLeadValue,
         currency:
           payload.currency?.toUpperCase() ??
           service?.defaultCurrency ??
@@ -724,7 +720,6 @@ export async function ingestWebhookLead(
       phone: mapped.contactData.phone,
       whatsapp: mapped.contactData.whatsapp,
       company: mapped.contactData.company,
-      jobTitle: mapped.contactData.jobTitle,
       country: mapped.contactData.country,
       state: mapped.contactData.state,
       city: mapped.contactData.city,
@@ -745,13 +740,10 @@ export async function ingestWebhookLead(
       serviceId: service?._id ?? resolvedForm.defaultServiceId,
       service: mapped.leadData.service ?? service?.name,
       submittedServiceName: mapped.leadData.service,
-      serviceCategory: mapped.leadData.serviceCategory,
       message: mapped.leadData.message,
       assignedUserId,
-      salesStatus: assignedUserId ? "assigned" : "new",
-      fulfilmentStatus: "not_started",
+      status: assignedUserId ? "assigned" : "new",
       priority: (mapped.leadData.priority ?? "normal") as LeadPriority,
-      leadValue: mapped.leadData.leadValue ?? service?.defaultLeadValue,
       currency:
         mapped.leadData.currency?.toUpperCase() ??
         service?.defaultCurrency ??

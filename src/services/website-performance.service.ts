@@ -1,5 +1,5 @@
 import {
-  SALES_STATUS_LABELS,
+  LEAD_STATUS_LABELS,
   SOURCE_SYSTEM_LABELS,
 } from "@/lib/constants";
 import {
@@ -77,16 +77,16 @@ async function buildMetrics(
     prevWithGclid,
   ] = await Promise.all([
     countLeads(currentFilters),
-    countLeads({ ...currentFilters, salesStatus: "qualified" }),
-    countLeads({ ...currentFilters, salesStatus: "converted" }),
+    countLeads({ ...currentFilters, status: "qualified" }),
+    countLeads({ ...currentFilters, status: "converted" }),
     countLeads({ ...currentFilters, assignedUserId: "unassigned" }),
     countLeadsWithGclid(currentFilters),
     previousFilters ? countLeads(previousFilters) : Promise.resolve(0),
     previousFilters
-      ? countLeads({ ...previousFilters, salesStatus: "qualified" })
+      ? countLeads({ ...previousFilters, status: "qualified" })
       : Promise.resolve(0),
     previousFilters
-      ? countLeads({ ...previousFilters, salesStatus: "converted" })
+      ? countLeads({ ...previousFilters, status: "converted" })
       : Promise.resolve(0),
     previousFilters
       ? countLeads({ ...previousFilters, assignedUserId: "unassigned" })
@@ -174,7 +174,7 @@ export async function getWebsitePerformanceAggregate(
       : Promise.resolve([]),
     options.visibleCharts.includes("by_status") ||
     options.visibleTables.includes("by_status")
-      ? aggregateLeadsByField("salesStatus", currentFilters)
+      ? aggregateLeadsByField("status", currentFilters)
       : Promise.resolve([]),
     options.visibleCharts.includes("by_source") ||
     options.visibleTables.includes("by_source")
@@ -184,7 +184,7 @@ export async function getWebsitePerformanceAggregate(
 
   const statusRows = byStatus.map((row) => ({
     label:
-      SALES_STATUS_LABELS[row.key as keyof typeof SALES_STATUS_LABELS] ??
+      LEAD_STATUS_LABELS[row.key as keyof typeof LEAD_STATUS_LABELS] ??
       row.key,
     count: row.count,
   }));

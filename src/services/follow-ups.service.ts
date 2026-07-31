@@ -8,7 +8,6 @@ import {
   PermissionError,
   resolveWebsiteFilter,
 } from "@/lib/permissions";
-import type { ScheduleFollowUpInput } from "@/lib/validation/lead.schema";
 import { createActivity } from "@/repositories/activities.repository";
 import { findContactById } from "@/repositories/contacts.repository";
 import {
@@ -23,6 +22,13 @@ import { listAssignableUsers } from "@/repositories/users.repository";
 import { listWebsites } from "@/repositories/websites.repository";
 import type { SessionUser } from "@/types/auth";
 import type { FollowUpMethod } from "@/types/follow-up";
+
+export interface ScheduleFollowUpInput {
+  method: string;
+  scheduledAt: string;
+  note?: string;
+  assignedUserId?: string;
+}
 
 export async function scheduleFollowUp(
   user: SessionUser,
@@ -59,11 +65,10 @@ export async function scheduleFollowUp(
   });
 
   await updateLead(leadId, {
-    nextFollowUpAt: scheduledAt,
-    salesStatus:
-      lead.salesStatus === "new" || lead.salesStatus === "assigned"
+    status:
+      lead.status === "new" || lead.status === "assigned"
         ? "follow_up_required"
-        : lead.salesStatus,
+        : lead.status,
   });
 
   await createActivity({

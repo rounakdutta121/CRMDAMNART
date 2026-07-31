@@ -1,7 +1,8 @@
 import type { ObjectId } from "mongodb";
 import type { LeadFormFieldValue } from "@/types/form";
 
-export type SalesStatus =
+/** Single pipeline status for a lead (replaces sales + fulfilment). */
+export type LeadStatus =
   | "new"
   | "assigned"
   | "contact_attempted"
@@ -17,14 +18,8 @@ export type SalesStatus =
   | "duplicate"
   | "spam_invalid";
 
-export type FulfilmentStatus =
-  | "not_started"
-  | "onboarding"
-  | "in_progress"
-  | "completed"
-  | "deliverables_sent"
-  | "cancelled"
-  | "refunded";
+/** @deprecated Use LeadStatus */
+export type SalesStatus = LeadStatus;
 
 export type LeadPriority = "low" | "normal" | "high" | "urgent";
 
@@ -53,20 +48,15 @@ export interface Lead {
   serviceId?: ObjectId;
   service?: string;
   submittedServiceName?: string;
-  serviceCategory?: string;
   message?: string;
   assignedUserId?: ObjectId;
-  salesStatus: SalesStatus;
-  fulfilmentStatus: FulfilmentStatus;
+  status: LeadStatus;
   priority: LeadPriority;
-  leadValue?: number;
   currency: string;
-  nextFollowUpAt?: Date;
   confirmedAt?: Date;
   paidAt?: Date;
   convertedAt?: Date;
   completedAt?: Date;
-  lostReason?: string;
   consentStatus?: ConsentStatus;
   privacyPolicyVersion?: string;
   searchName?: string;

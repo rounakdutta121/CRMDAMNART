@@ -76,23 +76,28 @@ export function canAddNotes(role: UserRole): boolean {
   );
 }
 
-export function canManageFollowUps(role: UserRole): boolean {
-  return canAddNotes(role);
-}
-
-export function canChangeSalesStatus(role: UserRole): boolean {
+export function canChangeStatus(role: UserRole): boolean {
   return (
     role === "super_admin" ||
     role === "admin" ||
     role === "sales_manager" ||
-    role === "sales_executive"
+    role === "sales_executive" ||
+    role === "operations"
   );
 }
 
+/** @deprecated Use canChangeStatus */
+export function canChangeSalesStatus(role: UserRole): boolean {
+  return canChangeStatus(role);
+}
+
+/** @deprecated Use canChangeStatus */
 export function canChangeFulfilmentStatus(role: UserRole): boolean {
-  return (
-    role === "super_admin" || role === "admin" || role === "operations"
-  );
+  return canChangeStatus(role);
+}
+
+export function canManageFollowUps(_role: UserRole): boolean {
+  return false;
 }
 
 export function canViewReports(role: UserRole): boolean {

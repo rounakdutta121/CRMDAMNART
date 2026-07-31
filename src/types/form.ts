@@ -24,14 +24,11 @@ export type CanonicalFieldTarget =
   | "contact.phone"
   | "contact.whatsapp"
   | "contact.company"
-  | "contact.jobTitle"
   | "contact.country"
   | "contact.state"
   | "contact.city"
   | "lead.service"
-  | "lead.serviceCategory"
   | "lead.message"
-  | "lead.leadValue"
   | "lead.currency"
   | "lead.priority"
   | "attribution.gclid"
@@ -134,16 +131,13 @@ export interface MappedFormSubmission {
     phone?: string;
     whatsapp?: string;
     company?: string;
-    jobTitle?: string;
     country?: string;
     state?: string;
     city?: string;
   };
   leadData: {
     service?: string;
-    serviceCategory?: string;
     message?: string;
-    leadValue?: number;
     currency?: string;
     priority?: LeadPriority;
   };

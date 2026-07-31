@@ -309,7 +309,7 @@ export async function transferLeadsForAdmin(
 
   const transferred = await bulkUpdateLeads(leadIds, {
     assignedUserId: nextUserId,
-    salesStatus: nextUserId ? "assigned" : "new",
+    status: nextUserId ? "assigned" : "new",
   });
 
   await writeAuditLog({
@@ -435,7 +435,7 @@ export async function removeWebsiteAccessForAdmin(
 
       leadsUpdated = await bulkUpdateLeads(leadIds, {
         assignedUserId: nextUserId,
-        salesStatus: nextUserId ? "assigned" : "new",
+        status: nextUserId ? "assigned" : "new",
       });
     }
   }

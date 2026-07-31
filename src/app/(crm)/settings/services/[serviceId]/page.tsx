@@ -5,6 +5,8 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { RenameEntityButton } from "@/components/shared/rename-entity-button";
+import { renameServiceAction } from "@/app/actions";
 import { requireSession } from "@/lib/auth";
 import { canManageServices } from "@/lib/permissions";
 import { findUserById } from "@/repositories/users.repository";
@@ -65,9 +67,16 @@ export default async function ServiceDetailPage({
       />
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <PageHeader title={service.name} description={service.code} />
-        <Button asChild variant="outline">
-          <Link href={`/settings/services/${serviceId}/edit`}>Edit service</Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <RenameEntityButton
+            currentName={service.name}
+            entityLabel="service name"
+            action={renameServiceAction.bind(null, serviceId)}
+          />
+          <Button asChild variant="outline">
+            <Link href={`/settings/services/${serviceId}/edit`}>Edit service</Link>
+          </Button>
+        </div>
       </div>
 
       <div className="mb-4">

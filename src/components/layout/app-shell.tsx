@@ -14,7 +14,6 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
   Building2,
-  CalendarClock,
   Contact,
   LayoutDashboard,
   Settings,
@@ -70,7 +69,6 @@ const recordItems: NavItem[] = [
   { href: "/leads", label: "Leads", icon: Users },
   { href: "/leads/my-leads", label: "My leads", icon: UserCheck },
   { href: "/contacts", label: "Contacts", icon: Contact },
-  { href: "/follow-ups", label: "Follow-ups", icon: CalendarClock },
 ];
 
 const sourceItems: NavItem[] = [

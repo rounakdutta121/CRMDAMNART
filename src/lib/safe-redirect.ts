@@ -3,7 +3,6 @@ const ALLOWED_PREFIXES = [
   "/leads",
   "/contacts",
   "/websites",
-  "/follow-ups",
   "/notifications",
   "/settings",
   "/login",

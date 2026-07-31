@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { LEAD_PRIORITIES, SALES_STATUSES } from "@/lib/constants";
+import { LEAD_PRIORITIES, LEAD_STATUSES } from "@/lib/constants";
 
 export const importColumnMappingSchema = z.object({
   websiteId: z.string().min(1),
   mappings: z.record(z.string(), z.string()),
   rows: z.array(z.record(z.string(), z.string())).min(1).max(2000),
-  defaultSalesStatus: z
-    .enum(SALES_STATUSES as [string, ...string[]])
+  defaultStatus: z
+    .enum(LEAD_STATUSES as [string, ...string[]])
     .default("new"),
   defaultPriority: z
     .enum(LEAD_PRIORITIES as [string, ...string[]])
@@ -29,15 +29,12 @@ export const IMPORT_CANONICAL_FIELDS = [
   "phone",
   "whatsapp",
   "company",
-  "jobTitle",
   "country",
   "state",
   "city",
   "service",
-  "serviceCategory",
   "message",
-  "leadValue",
   "currency",
   "priority",
-  "salesStatus",
+  "status",
 ] as const;

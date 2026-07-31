@@ -6,11 +6,8 @@ import { AuthError } from "next-auth";
 import { requireSession, signIn, signOut } from "@/lib/auth";
 import { createWebsiteSchema, updateWebsiteSchema } from "@/lib/validation/website.schema";
 import {
-  addNoteSchema,
-  contactAttemptSchema,
   createManualLeadFromFormSchema,
   createManualLeadSchema,
-  scheduleFollowUpSchema,
   updateContactSchema,
   updateLeadSchema,
 } from "@/lib/validation/lead.schema";
@@ -37,16 +34,12 @@ import {
   updateWebsiteForUser,
 } from "@/services/websites.service";
 import {
-  addNoteToLead,
   createManualLead,
   createManualLeadFromForm,
   deleteLeadForUser,
-  logContactAttempt,
-  scheduleFollowUpForLead,
   updateLeadForUser,
 } from "@/services/leads.service";
 import { updateContactForUser } from "@/services/contacts.service";
-import { completeFollowUp } from "@/services/follow-ups.service";
 import {
   bulkUpdateLeadsForUser,
 } from "@/services/leads.service";
@@ -275,11 +268,9 @@ export async function createManualLeadAction(
       const adminKeys = new Set([
         "websiteId",
         "formId",
-        "salesStatus",
-        "fulfilmentStatus",
+        "status",
         "priority",
         "assignedUserId",
-        "leadValue",
         "currency",
       ]);
       const payload: Record<string, unknown> = {};
@@ -296,11 +287,9 @@ export async function createManualLeadAction(
         websiteId: formData.get("websiteId"),
         formId,
         payload,
-        salesStatus: formData.get("salesStatus") || "new",
-        fulfilmentStatus: formData.get("fulfilmentStatus") || undefined,
+        status: formData.get("status") || "new",
         priority: formData.get("priority") || "normal",
         assignedUserId: formData.get("assignedUserId") || "",
-        leadValue: formData.get("leadValue") || undefined,
         currency: formData.get("currency") || undefined,
       });
 
@@ -324,17 +313,14 @@ export async function createManualLeadAction(
       phone: formData.get("phone") || "",
       whatsapp: formData.get("whatsapp") || "",
       company: formData.get("company") || "",
-      jobTitle: formData.get("jobTitle") || "",
       country: formData.get("country") || "",
       state: formData.get("state") || "",
       city: formData.get("city") || "",
       service: formData.get("service"),
-      serviceCategory: formData.get("serviceCategory") || "",
       formName: formData.get("formName") || "",
       message: formData.get("message") || "",
-      salesStatus: formData.get("salesStatus") || "new",
+      status: formData.get("status") || "new",
       priority: formData.get("priority") || "normal",
-      leadValue: formData.get("leadValue") || undefined,
       currency: formData.get("currency") || "INR",
       assignedUserId: formData.get("assignedUserId") || "",
     });
@@ -373,20 +359,15 @@ export async function updateLeadAction(
     const assignedRaw = formData.get("assignedUserId");
     const parsed = updateLeadSchema.safeParse({
       service: formData.get("service") || undefined,
-      serviceCategory: formData.get("serviceCategory") || undefined,
       formName: formData.get("formName") || undefined,
       message: formData.get("message") || undefined,
-      salesStatus: formData.get("salesStatus") || undefined,
-      fulfilmentStatus: formData.get("fulfilmentStatus") || undefined,
+      status: formData.get("status") || undefined,
       priority: formData.get("priority") || undefined,
-      leadValue: formData.get("leadValue") || undefined,
       currency: formData.get("currency") || undefined,
       assignedUserId:
         assignedRaw === null || assignedRaw === ""
           ? null
           : String(assignedRaw),
-      nextFollowUpAt: formData.get("nextFollowUpAt") || undefined,
-      lostReason: formData.get("lostReason") || undefined,
     });
 
     if (!parsed.success) {
@@ -421,7 +402,6 @@ export async function updateContactAction(
       phone: formData.get("phone") || "",
       whatsapp: formData.get("whatsapp") || "",
       company: formData.get("company") || "",
-      jobTitle: formData.get("jobTitle") || "",
       country: formData.get("country") || "",
       state: formData.get("state") || "",
       city: formData.get("city") || "",
@@ -438,98 +418,6 @@ export async function updateContactAction(
     revalidatePath(`/leads/${leadId}`);
     revalidatePath(`/contacts/${contactId}`);
     return { success: true, message: "Contact updated." };
-  } catch (error) {
-    return toActionError(error);
-  }
-}
-
-export async function addNoteAction(
-  leadId: string,
-  _prev: ActionResult | undefined,
-  formData: FormData
-): Promise<ActionResult> {
-  try {
-    const user = await requireSession();
-    const parsed = addNoteSchema.safeParse({
-      note: formData.get("note"),
-    });
-    if (!parsed.success) {
-      return {
-        success: false,
-        message: parsed.error.issues[0]?.message ?? "Validation failed.",
-      };
-    }
-    await addNoteToLead(user, leadId, parsed.data);
-    revalidatePath(`/leads/${leadId}`);
-    return { success: true, message: "Note added." };
-  } catch (error) {
-    return toActionError(error);
-  }
-}
-
-export async function contactAttemptAction(
-  leadId: string,
-  _prev: ActionResult | undefined,
-  formData: FormData
-): Promise<ActionResult> {
-  try {
-    const user = await requireSession();
-    const parsed = contactAttemptSchema.safeParse({
-      note: formData.get("note") || "",
-      method: formData.get("method") || "call",
-    });
-    if (!parsed.success) {
-      return {
-        success: false,
-        message: parsed.error.issues[0]?.message ?? "Validation failed.",
-      };
-    }
-    await logContactAttempt(user, leadId, parsed.data);
-    revalidatePath(`/leads/${leadId}`);
-    return { success: true, message: "Contact attempt logged." };
-  } catch (error) {
-    return toActionError(error);
-  }
-}
-
-export async function scheduleFollowUpAction(
-  leadId: string,
-  _prev: ActionResult | undefined,
-  formData: FormData
-): Promise<ActionResult> {
-  try {
-    const user = await requireSession();
-    const parsed = scheduleFollowUpSchema.safeParse({
-      method: formData.get("method"),
-      scheduledAt: formData.get("scheduledAt"),
-      note: formData.get("note") || "",
-      assignedUserId: formData.get("assignedUserId") || "",
-    });
-    if (!parsed.success) {
-      return {
-        success: false,
-        message: parsed.error.issues[0]?.message ?? "Validation failed.",
-      };
-    }
-    await scheduleFollowUpForLead(user, leadId, parsed.data);
-    revalidatePath(`/leads/${leadId}`);
-    revalidatePath("/follow-ups");
-    revalidatePath("/dashboard");
-    return { success: true, message: "Follow-up scheduled." };
-  } catch (error) {
-    return toActionError(error);
-  }
-}
-
-export async function completeFollowUpAction(
-  followUpId: string
-): Promise<ActionResult> {
-  try {
-    const user = await requireSession();
-    await completeFollowUp(user, followUpId);
-    revalidatePath("/follow-ups");
-    revalidatePath("/dashboard");
-    return { success: true, message: "Follow-up completed." };
   } catch (error) {
     return toActionError(error);
   }
@@ -848,6 +736,58 @@ export async function deleteFormAction(
   }
 }
 
+export async function renameFormAction(
+  websiteId: string,
+  formId: string,
+  name: string
+): Promise<ActionResult> {
+  try {
+    const user = await requireSession();
+    const nextName = name.trim();
+    if (nextName.length < 2) {
+      return { success: false, message: "Form name must be at least 2 characters." };
+    }
+    if (nextName.length > 120) {
+      return { success: false, message: "Form name is too long." };
+    }
+
+    await updateFormForUser(user, formId, { name: nextName });
+    revalidatePath(`/websites/${websiteId}/forms`);
+    revalidatePath(`/websites/${websiteId}/forms/${formId}`);
+    revalidatePath(`/websites/${websiteId}/forms/${formId}/edit`);
+    return { success: true, message: "Form renamed." };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
+export async function renameServiceAction(
+  serviceId: string,
+  name: string
+): Promise<ActionResult> {
+  try {
+    const user = await requireSession();
+    const nextName = name.trim();
+    if (nextName.length < 2) {
+      return {
+        success: false,
+        message: "Service name must be at least 2 characters.",
+      };
+    }
+    if (nextName.length > 120) {
+      return { success: false, message: "Service name is too long." };
+    }
+
+    await updateServiceForUser(user, serviceId, { name: nextName });
+    revalidatePath("/settings/services");
+    revalidatePath(`/settings/services/${serviceId}`);
+    revalidatePath(`/settings/services/${serviceId}/edit`);
+    return { success: true, message: "Service renamed." };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
 function buildPayloadFromFormData(formData: FormData): Record<string, unknown> {
   const payload: Record<string, unknown> = {};
   for (const [key, value] of formData.entries()) {
@@ -960,9 +900,7 @@ export async function bulkLeadAction(
       payload = {
         action,
         leadIds,
-        salesStatus: String(formData.get("salesStatus") ?? "") || undefined,
-        fulfilmentStatus:
-          String(formData.get("fulfilmentStatus") ?? "") || undefined,
+        status: String(formData.get("status") ?? ""),
       };
     } else if (action === "change_priority") {
       payload = {
@@ -1055,7 +993,7 @@ export async function importLeadsAction(
       websiteId: formData.get("websiteId"),
       mappings: JSON.parse(String(formData.get("mappings") ?? "{}")),
       rows: JSON.parse(String(formData.get("rows") ?? "[]")),
-      defaultSalesStatus: formData.get("defaultSalesStatus") || "new",
+      defaultStatus: formData.get("defaultStatus") || "new",
       defaultPriority: formData.get("defaultPriority") || "normal",
     });
 
