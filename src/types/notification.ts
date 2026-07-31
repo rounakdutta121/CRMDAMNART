@@ -1,6 +1,7 @@
 import type { ObjectId } from "mongodb";
 
 export type NotificationType =
+  | "lead_created"
   | "lead_assigned"
   | "lead_reassigned"
   | "lead_unassigned"

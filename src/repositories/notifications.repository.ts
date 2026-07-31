@@ -1,6 +1,7 @@
 import { ObjectId } from "mongodb";
 import { COLLECTIONS } from "@/lib/constants";
 import { getDb } from "@/lib/mongodb";
+import { listUsers } from "@/repositories/users.repository";
 import type { CRMNotification, NotificationType } from "@/types/notification";
 
 export async function createNotification(
@@ -13,6 +14,29 @@ export async function createNotification(
   };
   await db.collection<CRMNotification>(COLLECTIONS.notifications).insertOne(notification);
   return notification;
+}
+
+export async function createNotificationsForUsers(
+  userIds: ObjectId[],
+  data: Omit<CRMNotification, "_id" | "userId">
+): Promise<void> {
+  const uniqueIds = [
+    ...new Map(userIds.map((id) => [id.toHexString(), id])).values(),
+  ];
+  if (uniqueIds.length === 0) {
+    return;
+  }
+
+  const db = await getDb();
+  const now = data.createdAt ?? new Date();
+  await db.collection<CRMNotification>(COLLECTIONS.notifications).insertMany(
+    uniqueIds.map((userId) => ({
+      ...data,
+      _id: new ObjectId(),
+      userId,
+      createdAt: now,
+    }))
+  );
 }
 
 export async function listNotificationsForUser(
@@ -70,9 +94,12 @@ export async function notifyLeadAssignment(options: {
   leadId: ObjectId;
   websiteId: ObjectId;
   leadNumber: string;
-  actingUserId: ObjectId;
+  actingUserId?: ObjectId;
 }): Promise<void> {
-  if (options.userId.toHexString() === options.actingUserId.toHexString()) {
+  if (
+    options.actingUserId &&
+    options.userId.toHexString() === options.actingUserId.toHexString()
+  ) {
     return;
   }
 
@@ -94,4 +121,76 @@ export async function notifyLeadAssignment(options: {
     isRead: false,
     createdAt: new Date(),
   });
+}
+
+export async function notifyNewLead(options: {
+  leadId: ObjectId;
+  websiteId: ObjectId;
+  leadNumber: string;
+  websiteName?: string;
+  formName?: string;
+  contactName?: string;
+  sourceSystem?: string;
+  assignedUserId?: ObjectId;
+  excludeUserId?: ObjectId;
+}): Promise<void> {
+  const users = await listUsers({ isActive: true });
+  const websiteIdHex = options.websiteId.toHexString();
+  const recipientIds = users
+    .filter((user) => {
+      if (user.role === "viewer") {
+        return false;
+      }
+      if (user.role === "super_admin" || user.role === "admin") {
+        return true;
+      }
+      return user.permittedWebsiteIds.some(
+        (id) => id.toHexString() === websiteIdHex
+      );
+    })
+    .map((user) => user._id);
+
+  if (options.assignedUserId) {
+    recipientIds.push(options.assignedUserId);
+  }
+
+  const filtered = options.excludeUserId
+    ? recipientIds.filter(
+        (id) => id.toHexString() !== options.excludeUserId!.toHexString()
+      )
+    : recipientIds;
+
+  const assignedHex = options.assignedUserId?.toHexString();
+  const teamRecipients = assignedHex
+    ? filtered.filter((id) => id.toHexString() !== assignedHex)
+    : filtered;
+
+  const who = options.contactName?.trim() || "a new contact";
+  const where = options.websiteName?.trim() || "your website";
+  const via = options.formName?.trim()
+    ? ` via ${options.formName.trim()}`
+    : options.sourceSystem
+      ? ` via ${options.sourceSystem}`
+      : "";
+
+  await createNotificationsForUsers(teamRecipients, {
+    type: "lead_created",
+    title: "New lead received",
+    message: `${options.leadNumber}: ${who} on ${where}${via}.`,
+    entityType: "lead",
+    entityId: options.leadId,
+    websiteId: options.websiteId,
+    isRead: false,
+    createdAt: new Date(),
+  });
+
+  if (options.assignedUserId) {
+    await notifyLeadAssignment({
+      userId: options.assignedUserId,
+      type: "lead_assigned",
+      leadId: options.leadId,
+      websiteId: options.websiteId,
+      leadNumber: options.leadNumber,
+    });
+  }
 }

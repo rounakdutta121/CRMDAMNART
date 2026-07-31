@@ -37,6 +37,7 @@ import {
   listServicesForWebsite,
 } from "@/repositories/services.repository";
 import { findUserById } from "@/repositories/users.repository";
+import { notifyNewLead } from "@/repositories/notifications.repository";
 import { findWebsiteByWebhookKey } from "@/repositories/websites.repository";
 import { findOrCreateContact } from "@/services/contacts.service";
 import {
@@ -629,6 +630,17 @@ export async function ingestWebhookLead(
         createdAt: now,
       });
 
+      await notifyNewLead({
+        leadId: lead._id,
+        websiteId: website._id,
+        leadNumber: lead.leadNumber,
+        websiteName: website.name,
+        formName: lead.formName,
+        contactName: contact.name,
+        sourceSystem: lead.sourceSystem,
+        assignedUserId: lead.assignedUserId,
+      });
+
       if (options.idempotencyKey) {
         try {
           await createIdempotencyRecord({
@@ -788,6 +800,17 @@ export async function ingestWebhookLead(
         schemaVersion: lead.formSchemaVersion,
       },
       createdAt: now,
+    });
+
+    await notifyNewLead({
+      leadId: lead._id,
+      websiteId: website._id,
+      leadNumber: lead.leadNumber,
+      websiteName: website.name,
+      formName: lead.formName,
+      contactName: contact.name,
+      sourceSystem: lead.sourceSystem,
+      assignedUserId: lead.assignedUserId,
     });
 
     if (options.idempotencyKey) {

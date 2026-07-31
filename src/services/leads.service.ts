@@ -50,7 +50,7 @@ import {
   updateLead,
 } from "@/repositories/leads.repository";
 import { createAssignmentHistory, listByLeadId } from "@/repositories/assignment-history.repository";
-import { notifyLeadAssignment } from "@/repositories/notifications.repository";
+import { notifyLeadAssignment, notifyNewLead } from "@/repositories/notifications.repository";
 import { findFormById, listFormsByWebsite } from "@/repositories/forms.repository";
 import type { BulkLeadActionInput } from "@/lib/validation/bulk.schema";
 import { getActiveFields } from "@/lib/form-schema";
@@ -479,6 +479,18 @@ export async function createManualLead(
     createdAt: now,
   });
 
+  await notifyNewLead({
+    leadId: lead._id,
+    websiteId: website._id,
+    leadNumber: lead.leadNumber,
+    websiteName: website.name,
+    formName: lead.formName,
+    contactName: contact.name,
+    sourceSystem: "manual",
+    assignedUserId: lead.assignedUserId,
+    excludeUserId: new ObjectId(user.id),
+  });
+
   await writeAuditLog({
     actingUserId: user.id,
     action: "lead.created_manual",
@@ -713,6 +725,18 @@ export async function createManualLeadFromForm(
       sourceSystem: "manual",
     },
     createdAt: now,
+  });
+
+  await notifyNewLead({
+    leadId: lead._id,
+    websiteId: website._id,
+    leadNumber: lead.leadNumber,
+    websiteName: website.name,
+    formName: form.name,
+    contactName: contact.name,
+    sourceSystem: "manual",
+    assignedUserId: lead.assignedUserId,
+    excludeUserId: new ObjectId(user.id),
   });
 
   await writeAuditLog({
