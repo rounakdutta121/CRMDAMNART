@@ -1,14 +1,3 @@
-import {
-  endOfDay,
-  endOfMonth,
-  endOfYear,
-  startOfDay,
-  startOfMonth,
-  startOfYear,
-  subDays,
-  subMonths,
-  subYears,
-} from "date-fns";
 import type { DashboardPeriodPreset } from "@/types/dashboard-share";
 
 export type ReportingGranularity = "day" | "week" | "month";
@@ -23,7 +12,17 @@ export interface ResolvedReportingPeriod {
   granularity: ReportingGranularity;
 }
 
-function zonedParts(date: Date, timezone: string) {
+interface ZonedDateTimeParts {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+  millisecond: number;
+}
+
+function zonedParts(date: Date, timezone: string): ZonedDateTimeParts {
   const formatter = new Intl.DateTimeFormat("en-US", {
     timeZone: timezone,
     year: "numeric",
@@ -32,7 +31,7 @@ function zonedParts(date: Date, timezone: string) {
     hour: "numeric",
     minute: "numeric",
     second: "numeric",
-    hour12: false,
+    hourCycle: "h23",
   });
   const parts = formatter.formatToParts(date);
   const get = (type: string) =>
@@ -42,7 +41,107 @@ function zonedParts(date: Date, timezone: string) {
     year: get("year"),
     month: get("month"),
     day: get("day"),
+    hour: get("hour"),
+    minute: get("minute"),
+    second: get("second"),
+    millisecond: 0,
   };
+}
+
+function getTimeZoneOffsetMs(date: Date, timezone: string): number {
+  const parts = zonedParts(date, timezone);
+  const asUtc = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    parts.second,
+    parts.millisecond
+  );
+  return asUtc - date.getTime();
+}
+
+/** Convert a wall-clock date/time in `timezone` to a UTC `Date`. */
+export function zonedDateTimeToUtc(
+  parts: {
+    year: number;
+    month: number;
+    day: number;
+    hour?: number;
+    minute?: number;
+    second?: number;
+    millisecond?: number;
+  },
+  timezone: string
+): Date {
+  const utcGuess = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour ?? 0,
+    parts.minute ?? 0,
+    parts.second ?? 0,
+    parts.millisecond ?? 0
+  );
+  const offset = getTimeZoneOffsetMs(new Date(utcGuess), timezone);
+  let result = new Date(utcGuess - offset);
+
+  // Correct once more around DST transitions
+  const offset2 = getTimeZoneOffsetMs(result, timezone);
+  if (offset2 !== offset) {
+    result = new Date(utcGuess - offset2);
+  }
+
+  return result;
+}
+
+function startOfZonedDay(
+  year: number,
+  month: number,
+  day: number,
+  timezone: string
+): Date {
+  return zonedDateTimeToUtc({ year, month, day }, timezone);
+}
+
+function endOfZonedDay(
+  year: number,
+  month: number,
+  day: number,
+  timezone: string
+): Date {
+  const next = addDaysToParts(year, month, day, 1);
+  const startOfNextDay = startOfZonedDay(
+    next.year,
+    next.month,
+    next.day,
+    timezone
+  );
+  return new Date(startOfNextDay.getTime() - 1);
+}
+
+function addDaysToParts(
+  year: number,
+  month: number,
+  day: number,
+  deltaDays: number
+): { year: number; month: number; day: number } {
+  const utc = new Date(Date.UTC(year, month - 1, day + deltaDays, 12, 0, 0));
+  return {
+    year: utc.getUTCFullYear(),
+    month: utc.getUTCMonth() + 1,
+    day: utc.getUTCDate(),
+  };
+}
+
+function daysInMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+function formatYmdInZone(date: Date, timezone: string): string {
+  const parts = zonedParts(date, timezone);
+  return `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
 }
 
 function resolveGranularity(start?: Date, end?: Date): ReportingGranularity {
@@ -79,10 +178,7 @@ export function resolveReportingPeriod(options: {
 }): ResolvedReportingPeriod {
   const timezone = options.timezone ?? "Asia/Kolkata";
   const now = options.now ?? new Date();
-  const zoned = zonedParts(now, timezone);
-  const localNow = new Date(
-    Date.UTC(zoned.year, zoned.month - 1, zoned.day, 12, 0, 0)
-  );
+  const nowParts = zonedParts(now, timezone);
 
   if (options.preset === "all_time") {
     return {
@@ -99,11 +195,23 @@ export function resolveReportingPeriod(options: {
     if (options.customEndDate < options.customStartDate) {
       throw new Error("End date must be on or after start date.");
     }
-    const startDate = startOfDay(options.customStartDate);
-    const endDate = endOfDay(options.customEndDate);
+    const startParts = zonedParts(options.customStartDate, timezone);
+    const endParts = zonedParts(options.customEndDate, timezone);
+    const startDate = startOfZonedDay(
+      startParts.year,
+      startParts.month,
+      startParts.day,
+      timezone
+    );
+    const endDate = endOfZonedDay(
+      endParts.year,
+      endParts.month,
+      endParts.day,
+      timezone
+    );
     const previous = previousPeriod(startDate, endDate);
     return {
-      label: `${startDate.toISOString().slice(0, 10)} – ${endDate.toISOString().slice(0, 10)}`,
+      label: `${formatYmdInZone(startDate, timezone)} – ${formatYmdInZone(endDate, timezone)}`,
       startDate,
       endDate,
       previousStartDate: previous.previousStartDate,
@@ -114,55 +222,103 @@ export function resolveReportingPeriod(options: {
   }
 
   let startDate: Date;
-  let endDate: Date = endOfDay(localNow);
+  let endDate: Date = endOfZonedDay(
+    nowParts.year,
+    nowParts.month,
+    nowParts.day,
+    timezone
+  );
   let label = "";
 
   switch (options.preset) {
-    case "last_7_days":
-      startDate = startOfDay(subDays(localNow, 6));
+    case "last_7_days": {
+      const start = addDaysToParts(
+        nowParts.year,
+        nowParts.month,
+        nowParts.day,
+        -6
+      );
+      startDate = startOfZonedDay(start.year, start.month, start.day, timezone);
       label = "Last 7 days";
       break;
-    case "previous_7_days":
-      endDate = endOfDay(subDays(localNow, 7));
-      startDate = startOfDay(subDays(localNow, 13));
+    }
+    case "previous_7_days": {
+      const end = addDaysToParts(
+        nowParts.year,
+        nowParts.month,
+        nowParts.day,
+        -7
+      );
+      const start = addDaysToParts(
+        nowParts.year,
+        nowParts.month,
+        nowParts.day,
+        -13
+      );
+      endDate = endOfZonedDay(end.year, end.month, end.day, timezone);
+      startDate = startOfZonedDay(start.year, start.month, start.day, timezone);
       label = "Previous 7 days";
       break;
+    }
     case "this_month":
-      startDate = startOfMonth(localNow);
+      startDate = startOfZonedDay(nowParts.year, nowParts.month, 1, timezone);
       label = "This month";
       break;
     case "last_month": {
-      const lastMonth = subMonths(localNow, 1);
-      startDate = startOfMonth(lastMonth);
-      endDate = endOfMonth(lastMonth);
+      const month = nowParts.month === 1 ? 12 : nowParts.month - 1;
+      const year = nowParts.month === 1 ? nowParts.year - 1 : nowParts.year;
+      startDate = startOfZonedDay(year, month, 1, timezone);
+      endDate = endOfZonedDay(year, month, daysInMonth(year, month), timezone);
       label = "Last month";
       break;
     }
-    case "last_30_days":
-      startDate = startOfDay(subDays(localNow, 29));
+    case "last_30_days": {
+      const start = addDaysToParts(
+        nowParts.year,
+        nowParts.month,
+        nowParts.day,
+        -29
+      );
+      startDate = startOfZonedDay(start.year, start.month, start.day, timezone);
       label = "Last 30 days";
       break;
-    case "last_90_days":
-      startDate = startOfDay(subDays(localNow, 89));
+    }
+    case "last_90_days": {
+      const start = addDaysToParts(
+        nowParts.year,
+        nowParts.month,
+        nowParts.day,
+        -89
+      );
+      startDate = startOfZonedDay(start.year, start.month, start.day, timezone);
       label = "Last 90 days";
       break;
+    }
     case "this_year":
-      startDate = startOfYear(localNow);
+      startDate = startOfZonedDay(nowParts.year, 1, 1, timezone);
       label = "This year";
       break;
     case "last_year": {
-      const lastYear = subYears(localNow, 1);
-      startDate = startOfYear(lastYear);
-      endDate = endOfYear(lastYear);
+      const year = nowParts.year - 1;
+      startDate = startOfZonedDay(year, 1, 1, timezone);
+      endDate = endOfZonedDay(year, 12, 31, timezone);
       label = "Last year";
       break;
     }
-    case "rolling_12_months":
-      startDate = startOfDay(subMonths(localNow, 12));
+    case "rolling_12_months": {
+      const startMonth = nowParts.month;
+      const startYear = nowParts.year - 1;
+      startDate = startOfZonedDay(
+        startYear,
+        startMonth,
+        nowParts.day,
+        timezone
+      );
       label = "Rolling last 12 months";
       break;
+    }
     default:
-      startDate = startOfMonth(localNow);
+      startDate = startOfZonedDay(nowParts.year, nowParts.month, 1, timezone);
       label = "This month";
   }
 
@@ -187,6 +343,14 @@ export function formatMonthLabel(monthKey: string): string {
   const [year, month] = monthKey.split("-");
   const date = new Date(Number(year), Number(month) - 1, 1);
   return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
+
+export function formatPeriodDateRange(
+  startDate: Date,
+  endDate: Date,
+  timezone: string
+): string {
+  return `${formatYmdInZone(startDate, timezone)} – ${formatYmdInZone(endDate, timezone)}`;
 }
 
 export function calculatePercentChange(

@@ -9,6 +9,7 @@ import {
 } from "@/lib/permissions";
 import {
   calculatePercentChange,
+  formatPeriodDateRange,
   resolveReportingPeriod,
   safeRate,
   type ReportingGranularity,
@@ -160,7 +161,11 @@ export async function getWebsitePerformanceAggregate(
 
   const periodLabel =
     options.startDate && options.endDate
-      ? `${options.startDate.toISOString().slice(0, 10)} – ${options.endDate.toISOString().slice(0, 10)}`
+      ? formatPeriodDateRange(
+          options.startDate,
+          options.endDate,
+          options.timezone
+        )
       : "All time";
 
   const [metrics, leadsOverTime, byStatus, bySource] = await Promise.all([
@@ -231,7 +236,7 @@ export async function getWebsitePerformancePage(
     return Array.isArray(value) ? value[0] : value;
   };
 
-  const preset = (get("period") ?? "this_month") as DashboardPeriodPreset;
+  const preset = (get("period") ?? "last_30_days") as DashboardPeriodPreset;
   const period: ResolvedReportingPeriod = resolveReportingPeriod({
     preset,
     timezone: website.timezone,
