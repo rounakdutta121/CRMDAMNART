@@ -17,7 +17,11 @@ export const PERFORMANCE_CHARTS = [
   "by_source",
 ] as const;
 
-export const PERFORMANCE_TABLES = ["by_status", "by_source"] as const;
+export const PERFORMANCE_TABLES = [
+  "by_status",
+  "by_source",
+  "lead_details",
+] as const;
 
 export const createDashboardShareSchema = z.object({
   name: z.string().trim().min(2, "Name is required.").max(120),

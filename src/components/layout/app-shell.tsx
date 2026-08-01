@@ -14,6 +14,7 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
   Building2,
+  BookOpen,
   Contact,
   LayoutDashboard,
   Settings,
@@ -63,6 +64,7 @@ type NavItem = {
 const commandItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/notifications", label: "Notifications", icon: Bell },
+  { href: "/docs", label: "Docs", icon: BookOpen },
 ];
 
 const recordItems: NavItem[] = [

@@ -57,7 +57,7 @@ export function NewDashboardShareForm({
       />
       <PageHeader
         title="New share dashboard"
-        description="Configure a branded, aggregate-only public dashboard."
+        description="Configure a branded public dashboard with metrics and lead details."
       />
 
       <Card className="max-w-2xl">

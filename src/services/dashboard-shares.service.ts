@@ -41,8 +41,10 @@ import {
   toSafeDashboardShare,
   updateDashboardShare,
 } from "@/repositories/dashboard-shares.repository";
+import { findContactsByIds } from "@/repositories/contacts.repository";
 import { findUserById } from "@/repositories/users.repository";
 import { findWebsiteById } from "@/repositories/websites.repository";
+import { listLeads } from "@/repositories/leads.repository";
 import {
   getWebsitePerformanceAggregate,
   type WebsitePerformanceAggregate,
@@ -54,6 +56,28 @@ import type {
   SafeDashboardShare,
   DashboardShare,
 } from "@/types/dashboard-share";
+import {
+  LEAD_STATUS_LABELS,
+  SOURCE_SYSTEM_LABELS,
+} from "@/lib/constants";
+import {
+  buildPaginatedResult,
+  type PaginatedResult,
+  type PaginationParams,
+} from "@/lib/pagination";
+import type { LeadStatus, SourceSystem } from "@/types/lead";
+
+export interface PublicShareLeadRow {
+  id: string;
+  leadNumber: string;
+  contactName: string;
+  email: string;
+  phone: string;
+  service: string;
+  status: string;
+  source: string;
+  createdAt: string;
+}
 
 const MAX_PASSWORD_ATTEMPTS = 5;
 
@@ -549,6 +573,90 @@ export async function getPublicShareDashboardData(
     share: toSafeDashboardShare(share),
     websiteName: website.name,
     data,
+  };
+}
+
+export async function getPublicShareLeadDetails(
+  shareSlug: string,
+  accessToken: string | undefined,
+  pagination: PaginationParams
+): Promise<
+  | { ok: true; leads: PaginatedResult<PublicShareLeadRow> }
+  | { ok: false; status: DashboardAccessStatus; requiresPassword: boolean }
+> {
+  const share = await findDashboardShareBySlug(shareSlug);
+  if (!share) {
+    return { ok: false, status: "not_found", requiresPassword: false };
+  }
+
+  const status = resolveShareStatus(share);
+  if (status === "revoked" || status === "expired") {
+    return { ok: false, status, requiresPassword: false };
+  }
+
+  if (
+    share.access.passwordProtected &&
+    !hasValidShareAccess(share._id.toHexString(), accessToken)
+  ) {
+    return { ok: false, status: "password_failed", requiresPassword: true };
+  }
+
+  const website = await findWebsiteById(share.websiteId.toHexString());
+  if (!website) {
+    return { ok: false, status: "not_found", requiresPassword: false };
+  }
+
+  const period = resolveReportingPeriod({
+    preset: share.periodPreset,
+    timezone: website.timezone,
+    customStartDate: share.customStartDate,
+    customEndDate: share.customEndDate,
+  });
+
+  const { items, total } = await listLeads({
+    filters: {
+      websiteId: share.websiteId.toHexString(),
+      dateFrom: period.startDate,
+      dateTo: period.endDate,
+      excludeTestLeads: true,
+    },
+    skip: pagination.skip,
+    limit: pagination.limit,
+  });
+
+  const contacts = await findContactsByIds(
+    items.map((lead) => lead.contactId.toHexString())
+  );
+
+  const rows: PublicShareLeadRow[] = items.map((lead) => {
+    const contact = contacts.get(lead.contactId.toHexString());
+    return {
+      id: lead._id.toHexString(),
+      leadNumber: lead.leadNumber,
+      contactName: contact?.name?.trim() || "—",
+      email: contact?.email?.trim() || "—",
+      phone: contact?.phone?.trim() || "—",
+      service:
+        lead.service?.trim() ||
+        lead.submittedServiceName?.trim() ||
+        "—",
+      status:
+        LEAD_STATUS_LABELS[lead.status as LeadStatus] ?? lead.status,
+      source:
+        SOURCE_SYSTEM_LABELS[lead.sourceSystem as SourceSystem] ??
+        lead.sourceSystem,
+      createdAt: lead.createdAt.toISOString(),
+    };
+  });
+
+  return {
+    ok: true,
+    leads: buildPaginatedResult(
+      rows,
+      total,
+      pagination.page,
+      pagination.pageSize
+    ),
   };
 }
 

@@ -1,22 +1,32 @@
 import { format } from "date-fns";
 import { cookies } from "next/headers";
 import { PerformanceDashboard } from "@/components/performance/performance-dashboard";
+import { PublicShareLeadsTable } from "@/components/performance/public-share-leads-table";
 import { DashboardSharePasswordGate } from "@/components/performance/dashboard-share-password-gate";
 import { getDashboardAccessCookieName } from "@/lib/share-access-cookie";
-import { getPublicShareDashboardData } from "@/services/dashboard-shares.service";
+import { parsePagination } from "@/lib/pagination";
+import {
+  getPublicShareDashboardData,
+  getPublicShareLeadDetails,
+} from "@/services/dashboard-shares.service";
 
 export const metadata = {
   robots: "noindex,nofollow",
 };
 
-export const revalidate = 600;
+export const dynamic = "force-dynamic";
+
+const SHARE_LEADS_PAGE_SIZE = 10;
 
 export default async function PublicDashboardSharePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ shareSlug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { shareSlug } = await params;
+  const query = await searchParams;
   const cookieStore = await cookies();
   const accessToken = cookieStore.get(getDashboardAccessCookieName())?.value;
 
@@ -48,6 +58,17 @@ export default async function PublicDashboardSharePage({
       </div>
     );
   }
+
+  const pagination = parsePagination({
+    page: query.page,
+    pageSize: query.pageSize ?? String(SHARE_LEADS_PAGE_SIZE),
+  });
+
+  const leadsResult = await getPublicShareLeadDetails(
+    shareSlug,
+    accessToken,
+    pagination
+  );
 
   const { share, websiteName, data } = result;
 
@@ -100,13 +121,22 @@ export default async function PublicDashboardSharePage({
 
       <main className="mx-auto max-w-6xl px-4 py-8 lg:px-8">
         <p className="mb-8 border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 font-meta text-[0.6875rem] text-[var(--ink-muted)]">
-          Confidential aggregate report · No personal lead information is
-          displayed on this page
+          Confidential client report · Lead details are limited to this
+          reporting period
         </p>
         <PerformanceDashboard data={data} branding={share.branding} />
+        {leadsResult.ok ? (
+          <div className="mt-8">
+            <PublicShareLeadsTable
+              leads={leadsResult.leads}
+              shareSlug={shareSlug}
+              pageSize={pagination.pageSize}
+            />
+          </div>
+        ) : null}
         <footer className="mt-12 border-t border-[var(--border-strong)] pt-6 text-center">
           <p className="font-meta text-[0.625rem] text-[var(--ink-subtle)]">
-            Restricted distribution · Aggregate metrics only
+            Restricted distribution · Intended for authorized recipients only
           </p>
         </footer>
       </main>

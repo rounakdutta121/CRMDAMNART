@@ -14,6 +14,25 @@ export async function findContactById(id: string): Promise<Contact | null> {
     .findOne({ _id: new ObjectId(id) });
 }
 
+export async function findContactsByIds(
+  ids: string[]
+): Promise<Map<string, Contact>> {
+  const uniqueIds = [...new Set(ids.filter(Boolean))];
+  if (uniqueIds.length === 0) {
+    return new Map();
+  }
+
+  const db = await getDb();
+  const contacts = await db
+    .collection<Contact>(COLLECTIONS.contacts)
+    .find({ _id: { $in: uniqueIds.map((id) => new ObjectId(id)) } })
+    .toArray();
+
+  return new Map(
+    contacts.map((contact) => [contact._id.toHexString(), contact])
+  );
+}
+
 export async function findPossibleContact(options: {
   normalizedEmail?: string;
   normalizedPhone?: string;
