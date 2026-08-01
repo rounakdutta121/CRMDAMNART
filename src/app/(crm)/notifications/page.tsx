@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { PageHeader } from "@/components/shared/page-header";
+import { NotificationItemLink } from "@/components/notifications/notification-item-link";
 import { Button } from "@/components/ui/button";
 import { formatDateTimeIST } from "@/lib/datetime";
 import { markAllNotificationsReadAction } from "@/app/actions";
@@ -17,7 +17,7 @@ function notificationHref(notification: {
   if (notification.entityType === "user" && notification.entityId) {
     return `/settings/users/${notification.entityId.toHexString()}`;
   }
-  return undefined;
+  return "/notifications";
 }
 
 export default async function NotificationsPage() {
@@ -29,13 +29,13 @@ export default async function NotificationsPage() {
       <Breadcrumbs items={[{ label: "Notifications" }]} />
       <PageHeader
         title="Notifications"
-        description="Internal CRM alerts for assignments, invitations and shares."
+        description="Internal CRM alerts for assignments, invitations and shares. Opening or clearing a notification removes it."
       />
 
-      {notifications.some((n) => !n.isRead) ? (
+      {notifications.length > 0 ? (
         <form action={markAllNotificationsReadAction} className="mb-4">
           <Button type="submit" variant="outline" size="sm">
-            Mark all as read
+            Clear all
           </Button>
         </form>
       ) : null}
@@ -48,16 +48,17 @@ export default async function NotificationsPage() {
         ) : (
           notifications.map((notification) => {
             const href = notificationHref(notification);
+            const id = notification._id.toHexString();
             const content = (
-              <div
-                className={`border border-[var(--border)] bg-[var(--surface-elevated)] p-4 ${
-                  notification.isRead ? "opacity-70" : ""
-                }`}
-              >
+              <div className="border border-[var(--border)] bg-[var(--surface-elevated)] p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="font-medium text-[var(--ink)]">{notification.title}</p>
-                    <p className="mt-1 text-sm text-[var(--ink-muted)]">{notification.message}</p>
+                    <p className="font-medium text-[var(--ink)]">
+                      {notification.title}
+                    </p>
+                    <p className="mt-1 text-sm text-[var(--ink-muted)]">
+                      {notification.message}
+                    </p>
                   </div>
                   <p className="shrink-0 text-xs text-[var(--ink-muted)]">
                     {formatDateTimeIST(notification.createdAt)}
@@ -66,12 +67,10 @@ export default async function NotificationsPage() {
               </div>
             );
 
-            return href ? (
-              <Link key={notification._id.toHexString()} href={href} className="block hover:opacity-90">
+            return (
+              <NotificationItemLink key={id} notificationId={id} href={href}>
                 {content}
-              </Link>
-            ) : (
-              <div key={notification._id.toHexString()}>{content}</div>
+              </NotificationItemLink>
             );
           })
         )}

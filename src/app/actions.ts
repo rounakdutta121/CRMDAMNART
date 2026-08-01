@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
 import { requireSession, signIn, signOut } from "@/lib/auth";
+import { sanitizeInternalRedirectPath } from "@/lib/safe-redirect";
 import { createWebsiteSchema, updateWebsiteSchema } from "@/lib/validation/website.schema";
 import {
   createManualLeadFromFormSchema,
@@ -1053,6 +1054,7 @@ export async function markAllNotificationsReadAction(): Promise<void> {
     );
     await markAllNotificationsReadForUser(user);
     revalidatePath("/notifications");
+    revalidatePath("/dashboard");
   } catch (error) {
     console.error("[notifications]", error);
   }
@@ -1068,10 +1070,25 @@ export async function markNotificationReadAction(
     );
     await markNotificationReadForUser(user, notificationId);
     revalidatePath("/notifications");
-    return { success: true, message: "Notification marked as read." };
+    revalidatePath("/dashboard");
+    return { success: true, message: "Notification cleared." };
   } catch (error) {
     return toActionError(error);
   }
+}
+
+export async function openNotificationAction(
+  notificationId: string,
+  href: string
+): Promise<void> {
+  const user = await requireSession();
+  const { markNotificationReadForUser } = await import(
+    "@/services/notifications.service"
+  );
+  await markNotificationReadForUser(user, notificationId);
+  revalidatePath("/notifications");
+  revalidatePath("/dashboard");
+  redirect(sanitizeInternalRedirectPath(href, "/notifications"));
 }
 
 export async function createInvitationAction(

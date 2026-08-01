@@ -72,20 +72,17 @@ export async function markNotificationRead(
   userId: string
 ): Promise<void> {
   const db = await getDb();
-  const now = new Date();
-  await db.collection<CRMNotification>(COLLECTIONS.notifications).updateOne(
-    { _id: new ObjectId(notificationId), userId: new ObjectId(userId) },
-    { $set: { isRead: true, readAt: now } }
-  );
+  await db.collection<CRMNotification>(COLLECTIONS.notifications).deleteOne({
+    _id: new ObjectId(notificationId),
+    userId: new ObjectId(userId),
+  });
 }
 
 export async function markAllNotificationsRead(userId: string): Promise<void> {
   const db = await getDb();
-  const now = new Date();
-  await db.collection<CRMNotification>(COLLECTIONS.notifications).updateMany(
-    { userId: new ObjectId(userId), isRead: false },
-    { $set: { isRead: true, readAt: now } }
-  );
+  await db.collection<CRMNotification>(COLLECTIONS.notifications).deleteMany({
+    userId: new ObjectId(userId),
+  });
 }
 
 export async function notifyLeadAssignment(options: {

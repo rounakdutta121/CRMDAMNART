@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTransition } from "react";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +12,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { markAllNotificationsReadAction } from "@/app/actions";
+import {
+  markAllNotificationsReadAction,
+  openNotificationAction,
+} from "@/app/actions";
 
 export interface NotificationBellItem {
   id: string;
@@ -29,10 +33,17 @@ export function NotificationBell({
   unreadCount: number;
   notifications: NotificationBellItem[];
 }) {
+  const [pending, startTransition] = useTransition();
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="icon" className="relative" aria-label="Notifications">
+        <Button
+          variant="outline"
+          size="icon"
+          className="relative"
+          aria-label="Notifications"
+        >
           <Bell className="h-4 w-4" />
           {unreadCount > 0 ? (
             <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--danger)] px-1 text-[10px] font-semibold text-[var(--accent-fg)]">
@@ -44,34 +55,42 @@ export function NotificationBell({
       <DropdownMenuContent align="end" className="w-80">
         <DropdownMenuLabel className="flex items-center justify-between">
           <span>Notifications</span>
-          {unreadCount > 0 ? (
+          {notifications.length > 0 ? (
             <form action={markAllNotificationsReadAction}>
               <button
                 type="submit"
                 className="text-xs font-normal text-[var(--ink-muted)] hover:text-[var(--ink)]"
               >
-                Mark all read
+                Clear all
               </button>
             </form>
           ) : null}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {notifications.length === 0 ? (
-          <div className="px-2 py-4 text-sm text-[var(--ink-muted)]">No notifications yet.</div>
+          <div className="px-2 py-4 text-sm text-[var(--ink-muted)]">
+            No notifications yet.
+          </div>
         ) : (
           notifications.map((notification) => (
-            <DropdownMenuItem key={notification.id} asChild>
-              <Link
-                href={notification.href ?? "/notifications"}
-                className={`flex flex-col items-start gap-0.5 ${
-                  notification.isRead ? "opacity-70" : ""
-                }`}
-              >
-                <span className="font-medium">{notification.title}</span>
-                <span className="text-xs text-[var(--ink-muted)] line-clamp-2">
-                  {notification.message}
-                </span>
-              </Link>
+            <DropdownMenuItem
+              key={notification.id}
+              disabled={pending}
+              onSelect={(event) => {
+                event.preventDefault();
+                startTransition(async () => {
+                  await openNotificationAction(
+                    notification.id,
+                    notification.href ?? "/notifications"
+                  );
+                });
+              }}
+              className="flex cursor-pointer flex-col items-start gap-0.5"
+            >
+              <span className="font-medium">{notification.title}</span>
+              <span className="line-clamp-2 text-xs text-[var(--ink-muted)]">
+                {notification.message}
+              </span>
             </DropdownMenuItem>
           ))
         )}
