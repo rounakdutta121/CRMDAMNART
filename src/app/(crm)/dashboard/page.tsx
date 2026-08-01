@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { format } from "date-fns";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { PageHeader } from "@/components/shared/page-header";
 import { ArchivePanel, MetricStrip, ReportSection } from "@/components/shared/archive";
 import { LeadStatusBadge } from "@/components/shared/status-badges";
 import { DashboardFilters } from "@/components/dashboard/dashboard-filters";
 import { requireSession } from "@/lib/auth";
+import { formatDateIST } from "@/lib/datetime";
 import { getDashboardData } from "@/services/dashboard.service";
 
 function BarList({
@@ -55,7 +55,7 @@ export default async function DashboardPage({
   const user = await requireSession();
   const params = await searchParams;
   const data = await getDashboardData(user, params);
-  const periodLabel = format(new Date(), "dd MMM yyyy").toUpperCase();
+  const periodLabel = formatDateIST(new Date()).toUpperCase();
 
   return (
     <div className="page-full space-y-6">

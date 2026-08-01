@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { format } from "date-fns";
 import { notFound } from "next/navigation";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { PageHeader } from "@/components/shared/page-header";
+import { formatDateIST } from "@/lib/datetime";
 import { LeadStatusBadge } from "@/components/shared/status-badges";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireSession } from "@/lib/auth";
@@ -72,7 +72,7 @@ export default async function ContactDetailPage({
                     <p className="text-sm font-medium">{lead.leadNumber}</p>
                     <p className="text-xs text-[var(--ink-muted)]">
                       {lead.service ?? "No service"} ·{" "}
-                      {format(lead.createdAt, "dd MMM yyyy")}
+                      {formatDateIST(lead.createdAt)}
                     </p>
                   </div>
                   <LeadStatusBadge status={lead.status} />

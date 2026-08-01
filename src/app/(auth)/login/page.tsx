@@ -11,8 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { APP_NAME } from "@/lib/constants";
+import { formatDateIST } from "@/lib/datetime";
 import { useState } from "react";
-import { format } from "date-fns";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -74,7 +74,7 @@ export default function LoginPage() {
               System / Lead operations
             </p>
             <p className="font-meta text-[0.6875rem] text-[var(--ink-subtle)]">
-              Filed {format(new Date(), "dd MMM yyyy").toUpperCase()}
+              Filed {formatDateIST(new Date()).toUpperCase()}
             </p>
           </div>
           <h1 className="mt-4 font-editorial text-3xl font-semibold tracking-tight text-[var(--ink)]">

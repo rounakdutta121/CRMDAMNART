@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { format } from "date-fns";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
+import { formatDateIST } from "@/lib/datetime";
 import { PaginationControls } from "@/components/shared/pagination-controls";
 import { requireSession } from "@/lib/auth";
 import { getContactsPage } from "@/services/contacts.service";
@@ -73,7 +73,7 @@ export default async function ContactsPage({
                     <td className="px-4 py-3">{contact.phone ?? "—"}</td>
                     <td className="px-4 py-3">{contact.company ?? "—"}</td>
                     <td className="px-4 py-3">
-                      {format(contact.createdAt, "dd MMM yyyy")}
+                      {formatDateIST(contact.createdAt)}
                     </td>
                   </tr>
                 ))}

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { format } from "date-fns";
 import { notFound, redirect } from "next/navigation";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { CopyButton } from "@/components/shared/copy-button";
@@ -7,6 +6,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { ShareAdminActions } from "@/components/performance/share-admin-actions";
 import { Button } from "@/components/ui/button";
 import { requireSession } from "@/lib/auth";
+import { formatDateTimeIST } from "@/lib/datetime";
 import { getAppUrl } from "@/lib/env";
 import { canCreateDashboardShare } from "@/lib/permissions";
 import {
@@ -73,7 +73,7 @@ export default async function DashboardShareDetailPage({
           <p className="text-xs text-[var(--ink-muted)]">Last viewed</p>
           <p className="font-medium">
             {share.lastViewedAt
-              ? format(share.lastViewedAt, "dd MMM yyyy HH:mm")
+              ? formatDateTimeIST(share.lastViewedAt)
               : "—"}
           </p>
         </div>

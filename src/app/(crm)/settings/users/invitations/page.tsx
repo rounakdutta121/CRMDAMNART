@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { format } from "date-fns";
 import { redirect } from "next/navigation";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { PageHeader } from "@/components/shared/page-header";
+import { formatDateTimeIST } from "@/lib/datetime";
 import { Badge } from "@/components/ui/badge";
 import { InvitationActions } from "@/components/invitations/invitation-actions";
 import { ROLE_LABELS } from "@/lib/constants";
@@ -81,7 +81,7 @@ export default async function InvitationsPage() {
                     </Badge>
                   </td>
                   <td className="px-4 py-3">
-                    {format(invitation.expiresAt, "dd MMM yyyy HH:mm")}
+                    {formatDateTimeIST(invitation.expiresAt)}
                   </td>
                   <td className="px-4 py-3">
                     <InvitationActions

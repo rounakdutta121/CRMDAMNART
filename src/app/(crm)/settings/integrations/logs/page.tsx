@@ -1,8 +1,8 @@
-import { format } from "date-fns";
 import Link from "next/link";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
+import { formatDateTimeSecondsIST } from "@/lib/datetime";
 import { PaginationControls } from "@/components/shared/pagination-controls";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -114,7 +114,7 @@ export default async function IntegrationLogsPage({
                 {data.items.map(({ log, website }) => (
                   <tr key={log._id.toHexString()} className="border-t border-[var(--border)]">
                     <td className="px-4 py-3">
-                      {format(log.createdAt, "dd MMM yyyy HH:mm:ss")}
+                      {formatDateTimeSecondsIST(log.createdAt)}
                     </td>
                     <td className="px-4 py-3">{website?.name ?? "—"}</td>
                     <td className="px-4 py-3">{log.integrationType}</td>

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { format } from "date-fns";
 import { notFound, redirect } from "next/navigation";
 import { UserActionsPanel } from "@/components/users/user-actions-panel";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
@@ -8,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ROLE_LABELS } from "@/lib/constants";
+import { formatDateTimeIST } from "@/lib/datetime";
 import { requireSession } from "@/lib/auth";
 import { canManageUsers } from "@/lib/permissions";
 import { getAccessibleWebsites } from "@/services/websites.service";
@@ -102,11 +102,11 @@ export default async function UserDetailPage({
             />
             <DetailRow
               label="Created"
-              value={format(targetUser.createdAt, "dd MMM yyyy HH:mm")}
+              value={formatDateTimeIST(targetUser.createdAt)}
             />
             <DetailRow
               label="Updated"
-              value={format(targetUser.updatedAt, "dd MMM yyyy HH:mm")}
+              value={formatDateTimeIST(targetUser.updatedAt)}
             />
           </CardContent>
         </Card>

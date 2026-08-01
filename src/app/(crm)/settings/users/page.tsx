@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { format } from "date-fns";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
+import { formatDateIST } from "@/lib/datetime";
 import { Button } from "@/components/ui/button";
 import { ROLE_LABELS } from "@/lib/constants";
 import { requireSession } from "@/lib/auth";
@@ -75,7 +75,7 @@ export default async function UsersSettingsPage() {
                   </Badge>
                 </td>
                 <td className="px-4 py-3">
-                  {format(item.createdAt, "dd MMM yyyy")}
+                  {formatDateIST(item.createdAt)}
                 </td>
               </tr>
             ))}

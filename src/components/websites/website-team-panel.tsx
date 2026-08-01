@@ -2,12 +2,12 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { format } from "date-fns";
 import {
   addWebsiteAccessAction,
   removeWebsiteAccessAction,
   type ActionResult,
 } from "@/app/actions";
+import { formatDateIST } from "@/lib/datetime";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { GlobalLoadingSync } from "@/components/shared/global-loading";
 import { PageHeader } from "@/components/shared/page-header";
@@ -158,7 +158,7 @@ export function WebsiteTeamPanel({
                   <td className="px-4 py-3">{member.leadsThisMonth}</td>
                   <td className="px-4 py-3">
                     {member.lastLoginAt
-                      ? format(new Date(member.lastLoginAt), "dd MMM yyyy")
+                      ? formatDateIST(member.lastLoginAt)
                       : "—"}
                   </td>
                   <td className="px-4 py-3">

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { format } from "date-fns";
 import { notFound } from "next/navigation";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { PageHeader } from "@/components/shared/page-header";
@@ -17,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { deleteLeadAction } from "@/app/actions";
 import { requireSession } from "@/lib/auth";
+import { formatDateTimeIST } from "@/lib/datetime";
 import {
   canAssignLeads,
   canChangeStatus,
@@ -134,7 +134,7 @@ export default async function LeadDetailPage({
     { label: "Currency", value: lead.currency },
     {
       label: "Created",
-      value: format(lead.createdAt, "dd MMM yyyy HH:mm"),
+      value: formatDateTimeIST(lead.createdAt),
     },
     { label: "Message", value: lead.message },
   ].filter((row) => row.value);
@@ -144,23 +144,23 @@ export default async function LeadDetailPage({
     {
       label: "Confirmed",
       value: lead.confirmedAt
-        ? format(lead.confirmedAt, "dd MMM yyyy HH:mm")
+        ? formatDateTimeIST(lead.confirmedAt)
         : undefined,
     },
     {
       label: "Paid",
-      value: lead.paidAt ? format(lead.paidAt, "dd MMM yyyy HH:mm") : undefined,
+      value: lead.paidAt ? formatDateTimeIST(lead.paidAt) : undefined,
     },
     {
       label: "Converted",
       value: lead.convertedAt
-        ? format(lead.convertedAt, "dd MMM yyyy HH:mm")
+        ? formatDateTimeIST(lead.convertedAt)
         : undefined,
     },
     {
       label: "Completed",
       value: lead.completedAt
-        ? format(lead.completedAt, "dd MMM yyyy HH:mm")
+        ? formatDateTimeIST(lead.completedAt)
         : undefined,
     },
   ].filter((row) => row.value);
@@ -337,7 +337,7 @@ export default async function LeadDetailPage({
                     </p>
                     <p className="text-xs text-[var(--ink-muted)]">
                       {activity.type} ·{" "}
-                      {format(activity.createdAt, "dd MMM yyyy HH:mm")}
+                      {formatDateTimeIST(activity.createdAt)}
                     </p>
                   </div>
                 ))

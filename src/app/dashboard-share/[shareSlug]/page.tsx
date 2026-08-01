@@ -1,8 +1,8 @@
-import { format } from "date-fns";
 import { cookies } from "next/headers";
 import { PerformanceDashboard } from "@/components/performance/performance-dashboard";
 import { PublicShareLeadsTable } from "@/components/performance/public-share-leads-table";
 import { DashboardSharePasswordGate } from "@/components/performance/dashboard-share-password-gate";
+import { formatDateTimeIST } from "@/lib/datetime";
 import { getDashboardAccessCookieName } from "@/lib/share-access-cookie";
 import { parsePagination } from "@/lib/pagination";
 import {
@@ -109,7 +109,7 @@ export default async function PublicDashboardSharePage({
                 Refreshed
               </p>
               <p className="font-mono-id text-sm">
-                {format(new Date(), "dd MMM yyyy HH:mm")}
+                {formatDateTimeIST(new Date())}
               </p>
             </div>
           </div>

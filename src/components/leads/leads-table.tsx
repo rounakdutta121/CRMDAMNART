@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { format } from "date-fns";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { bulkLeadAction } from "@/app/actions";
 import { MobileRecordCard } from "@/components/shared/mobile-record-card";
 import { useGlobalLoading } from "@/components/shared/global-loading";
+import { formatDateIST } from "@/lib/datetime";
 import {
   LeadStatusBadge,
   PriorityBadge,
@@ -242,7 +242,7 @@ export function LeadsTable({
                 { label: "Owner", value: item.assigneeName || "Unassigned" },
                 {
                   label: "Received",
-                  value: format(new Date(item.createdAt), "dd MMM yyyy"),
+                  value: formatDateIST(item.createdAt),
                 },
               ]}
             />
@@ -326,7 +326,7 @@ export function LeadsTable({
                   <PriorityBadge priority={item.priority} />
                 </td>
                 <td className="font-mono-id text-xs">
-                  {format(new Date(item.createdAt), "dd MMM yyyy")}
+                  {formatDateIST(item.createdAt)}
                 </td>
               </tr>
             ))}

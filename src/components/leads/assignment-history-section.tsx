@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { formatDateTimeIST } from "@/lib/datetime";
 
 export interface SerializedAssignmentHistoryItem {
   id: string;
@@ -30,7 +30,7 @@ export function AssignmentHistorySection({
             </p>
             <p className="text-xs text-[var(--ink-muted)]">
               by {item.changedByName} ·{" "}
-              {format(new Date(item.createdAt), "dd MMM yyyy HH:mm")}
+              {formatDateTimeIST(item.createdAt)}
             </p>
           </li>
         ))}

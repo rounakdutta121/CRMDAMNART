@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { format } from "date-fns";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
+import { formatDateTimeIST } from "@/lib/datetime";
 import { markAllNotificationsReadAction } from "@/app/actions";
 import { requireSession } from "@/lib/auth";
 import { getNotificationsForUser } from "@/services/notifications.service";
@@ -60,7 +60,7 @@ export default async function NotificationsPage() {
                     <p className="mt-1 text-sm text-[var(--ink-muted)]">{notification.message}</p>
                   </div>
                   <p className="shrink-0 text-xs text-[var(--ink-muted)]">
-                    {format(notification.createdAt, "dd MMM yyyy HH:mm")}
+                    {formatDateTimeIST(notification.createdAt)}
                   </p>
                 </div>
               </div>

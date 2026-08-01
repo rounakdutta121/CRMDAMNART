@@ -1,6 +1,6 @@
-import { format } from "date-fns";
 import { ArchivePanel, ReportSection } from "@/components/shared/archive";
 import { PaginationControls } from "@/components/shared/pagination-controls";
+import { formatDateTimeIST } from "@/lib/datetime";
 import type { PublicShareLeadRow } from "@/services/dashboard-shares.service";
 import type { PaginatedResult } from "@/lib/pagination";
 
@@ -62,7 +62,7 @@ export function PublicShareLeadsTable({
                     <td>{lead.status}</td>
                     <td>{lead.source}</td>
                     <td className="font-mono-id text-xs whitespace-nowrap">
-                      {format(new Date(lead.createdAt), "dd MMM yyyy HH:mm")}
+                      {formatDateTimeIST(lead.createdAt)}
                     </td>
                   </tr>
                 ))

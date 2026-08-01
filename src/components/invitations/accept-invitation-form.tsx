@@ -3,7 +3,6 @@
 import { useActionState } from "react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { format } from "date-fns";
 import {
   acceptInvitationAction,
   type ActionResult,
@@ -13,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { APP_NAME, ROLE_LABELS } from "@/lib/constants";
+import { formatDateTimeIST } from "@/lib/datetime";
 import type { UserRole } from "@/types/auth";
 
 const initial: ActionResult = { success: false, message: "" };
@@ -78,7 +78,7 @@ export function AcceptInvitationForm({
                 Expires
               </p>
               <p className="mt-1 font-mono-id text-xs text-[var(--ink)]">
-                {format(new Date(preview.expiresAt), "dd MMM yyyy HH:mm")}
+                {formatDateTimeIST(preview.expiresAt)}
               </p>
             </div>
           </div>
