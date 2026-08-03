@@ -186,6 +186,14 @@ export async function updateContact(
   );
 }
 
+export async function deleteContactById(id: string): Promise<boolean> {
+  const db = await getDb();
+  const result = await db.collection<Contact>(COLLECTIONS.contacts).deleteOne({
+    _id: new ObjectId(id),
+  });
+  return result.deletedCount === 1;
+}
+
 export async function markContactMerged(options: {
   secondaryContactId: string;
   primaryContactId: string;

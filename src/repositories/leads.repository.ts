@@ -173,7 +173,19 @@ export async function deleteLeadRelatedRecords(leadId: string): Promise<void> {
       .deleteMany({ leadId: id }),
     db.collection(COLLECTIONS.conversionEvents).deleteMany({ leadId: id }),
     db.collection(COLLECTIONS.webhookIdempotency).deleteMany({ leadId: id }),
+    db.collection(COLLECTIONS.followUps).deleteMany({ leadId: id }),
+    db.collection(COLLECTIONS.notifications).deleteMany({
+      entityType: "lead",
+      entityId: id,
+    }),
   ]);
+}
+
+export async function countLeadsForContact(contactId: string): Promise<number> {
+  const db = await getDb();
+  return db.collection<Lead>(COLLECTIONS.leads).countDocuments({
+    contactId: new ObjectId(contactId),
+  });
 }
 
 export async function updateLead(

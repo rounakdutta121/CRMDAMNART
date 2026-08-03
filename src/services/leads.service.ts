@@ -39,9 +39,10 @@ import {
   findLeadIdsWithGclid,
 } from "@/repositories/attributions.repository";
 import { findServiceById, listServicesForWebsite } from "@/repositories/services.repository";
-import { findContactById, findDuplicateContacts } from "@/repositories/contacts.repository";
+import { findContactById, findDuplicateContacts, deleteContactById } from "@/repositories/contacts.repository";
 import {
   bulkUpdateLeads,
+  countLeadsForContact,
   createLead,
   deleteLeadById,
   deleteLeadRelatedRecords,
@@ -1039,10 +1040,17 @@ export async function deleteLeadForUser(
 
   assertCanAccessWebsite(user, lead.websiteId.toHexString());
 
+  const contactId = lead.contactId.toHexString();
+
   await deleteLeadRelatedRecords(leadId);
   const deleted = await deleteLeadById(leadId);
   if (!deleted) {
     throw new Error("Lead not found.");
+  }
+
+  const remainingLeads = await countLeadsForContact(contactId);
+  if (remainingLeads === 0) {
+    await deleteContactById(contactId);
   }
 
   await writeAuditLog({
@@ -1055,6 +1063,8 @@ export async function deleteLeadForUser(
       leadNumber: lead.leadNumber,
       formCode: lead.formCode,
       status: lead.status,
+      contactId,
+      contactDeleted: remainingLeads === 0,
     },
   });
 }
