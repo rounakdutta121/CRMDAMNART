@@ -35,8 +35,10 @@ import { createActivity, listActivitiesByLeadId } from "@/repositories/activitie
 import {
   createAttribution,
   findAttributionByLeadId,
+  findAttributionsByLeadIds,
   findLeadIdsWithAttribution,
   findLeadIdsWithGclid,
+  upsertLeadGclid,
 } from "@/repositories/attributions.repository";
 import { findServiceById, listServicesForWebsite } from "@/repositories/services.repository";
 import { findContactById, findDuplicateContacts, deleteContactById } from "@/repositories/contacts.repository";
@@ -81,6 +83,7 @@ export interface LeadListItem {
   contact: Contact | null;
   website: SafeWebsite | null;
   assignedUser: SafeCRMUser | null;
+  gclid: string | null;
 }
 
 export interface LeadDetail {
@@ -309,6 +312,15 @@ export async function getLeadsPage(
       .map((c) => [c._id.toHexString(), c])
   );
 
+  const leadIds = items.map((lead) => lead._id.toHexString());
+  const attributions = await findAttributionsByLeadIds(leadIds);
+  const gclidMap = new Map(
+    attributions.map((attr) => [
+      attr.leadId.toHexString(),
+      attr.gclid?.trim() ? attr.gclid : null,
+    ])
+  );
+
   const listItems: LeadListItem[] = items.map((lead) => ({
     lead,
     contact: contactMap.get(lead.contactId.toHexString()) ?? null,
@@ -316,6 +328,7 @@ export async function getLeadsPage(
     assignedUser: lead.assignedUserId
       ? userMap.get(lead.assignedUserId.toHexString()) ?? null
       : null,
+    gclid: gclidMap.get(lead._id.toHexString()) ?? null,
   }));
 
   const forms =
@@ -941,6 +954,40 @@ export async function updateLeadForUser(
     throw new Error("Lead not found after update.");
   }
   return updated;
+}
+
+export async function updateLeadGclidForUser(
+  user: SessionUser,
+  leadId: string,
+  gclidRaw: string
+): Promise<void> {
+  if (!canEditLeads(user.role)) {
+    throw new PermissionError("You are not allowed to edit leads.");
+  }
+
+  const existing = await findLeadById(leadId);
+  if (!existing) {
+    throw new Error("Lead not found.");
+  }
+
+  assertCanAccessWebsite(user, existing.websiteId.toHexString());
+
+  const gclid = normalizeOptionalString(gclidRaw);
+  await upsertLeadGclid({
+    leadId: existing._id,
+    contactId: existing.contactId,
+    websiteId: existing.websiteId,
+    gclid,
+  });
+
+  await writeAuditLog({
+    actingUserId: user.id,
+    action: "lead.gclid_updated",
+    entityType: "lead",
+    entityId: leadId,
+    websiteId: existing.websiteId,
+    newValues: { gclid: gclid ?? null },
+  });
 }
 
 export async function bulkUpdateLeadsForUser(

@@ -12,6 +12,7 @@ import {
   type LeadListFilters,
 } from "@/repositories/leads.repository";
 import { findContactById } from "@/repositories/contacts.repository";
+import { findAttributionsByLeadIds } from "@/repositories/attributions.repository";
 import { listAssignableUsers } from "@/repositories/users.repository";
 import { listWebsites } from "@/repositories/websites.repository";
 import type { LeadListItem } from "@/services/leads.service";
@@ -153,6 +154,15 @@ export async function getMonthlyLeadsPage(
         .map((c) => [c._id.toHexString(), c])
     );
 
+    const leadIds = result.items.map((lead) => lead._id.toHexString());
+    const attributions = await findAttributionsByLeadIds(leadIds);
+    const gclidMap = new Map(
+      attributions.map((attr) => [
+        attr.leadId.toHexString(),
+        attr.gclid?.trim() ? attr.gclid : null,
+      ])
+    );
+
     listItems = result.items.map((lead) => ({
       lead,
       contact: contactMap.get(lead.contactId.toHexString()) ?? null,
@@ -160,6 +170,7 @@ export async function getMonthlyLeadsPage(
       assignedUser: lead.assignedUserId
         ? userMap.get(lead.assignedUserId.toHexString()) ?? null
         : null,
+      gclid: gclidMap.get(lead._id.toHexString()) ?? null,
     }));
   }
 

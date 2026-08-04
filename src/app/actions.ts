@@ -39,6 +39,7 @@ import {
   createManualLeadFromForm,
   deleteLeadForUser,
   updateLeadForUser,
+  updateLeadGclidForUser,
 } from "@/services/leads.service";
 import { updateContactForUser } from "@/services/contacts.service";
 import {
@@ -357,18 +358,31 @@ export async function updateLeadAction(
 ): Promise<ActionResult> {
   try {
     const user = await requireSession();
-    const assignedRaw = formData.get("assignedUserId");
     const parsed = updateLeadSchema.safeParse({
-      service: formData.get("service") || undefined,
-      formName: formData.get("formName") || undefined,
-      message: formData.get("message") || undefined,
-      status: formData.get("status") || undefined,
-      priority: formData.get("priority") || undefined,
-      currency: formData.get("currency") || undefined,
-      assignedUserId:
-        assignedRaw === null || assignedRaw === ""
+      service: formData.has("service")
+        ? String(formData.get("service") ?? "")
+        : undefined,
+      formName: formData.has("formName")
+        ? String(formData.get("formName") ?? "")
+        : undefined,
+      message: formData.has("message")
+        ? String(formData.get("message") ?? "")
+        : undefined,
+      status: formData.has("status")
+        ? String(formData.get("status") ?? "") || undefined
+        : undefined,
+      priority: formData.has("priority")
+        ? String(formData.get("priority") ?? "") || undefined
+        : undefined,
+      currency: formData.has("currency")
+        ? String(formData.get("currency") ?? "") || undefined
+        : undefined,
+      assignedUserId: formData.has("assignedUserId")
+        ? formData.get("assignedUserId") === "" ||
+          formData.get("assignedUserId") === null
           ? null
-          : String(assignedRaw),
+          : String(formData.get("assignedUserId"))
+        : undefined,
     });
 
     if (!parsed.success) {
@@ -418,7 +432,23 @@ export async function updateContactAction(
     await updateContactForUser(user, contactId, parsed.data, websiteId);
     revalidatePath(`/leads/${leadId}`);
     revalidatePath(`/contacts/${contactId}`);
+    revalidatePath("/leads");
     return { success: true, message: "Contact updated." };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
+export async function updateLeadGclidAction(
+  leadId: string,
+  gclid: string
+): Promise<ActionResult> {
+  try {
+    const user = await requireSession();
+    await updateLeadGclidForUser(user, leadId, gclid);
+    revalidatePath(`/leads/${leadId}`);
+    revalidatePath("/leads");
+    return { success: true, message: "GCLID updated." };
   } catch (error) {
     return toActionError(error);
   }

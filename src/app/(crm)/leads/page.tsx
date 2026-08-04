@@ -21,6 +21,9 @@ import {
 import { requireSession } from "@/lib/auth";
 import {
   canCreateManualLeads,
+  canEditContacts,
+  canEditLeads,
+  canAssignLeads,
   canExportLeads,
   canImportLeads,
   canPerformBulkActions,
@@ -109,13 +112,21 @@ export default async function LeadsPage({
     return {
       id: item.lead._id.toHexString(),
       leadNumber: item.lead.leadNumber,
-      contactName: item.contact?.name ?? "—",
+      contactId: item.contact?._id.toHexString() ?? "",
+      websiteId: item.lead.websiteId.toHexString(),
+      contactName: item.contact?.name ?? "",
       websiteName: item.website?.name ?? "—",
-      service: item.lead.service ?? "—",
-      phone: item.contact?.phone ?? "—",
-      email: item.contact?.email ?? "—",
-      sourceSystem: item.lead.sourceSystem,
+      service: item.lead.service ?? "",
+      phone: item.contact?.phone ?? "",
+      email: item.contact?.email ?? "",
+      whatsapp: item.contact?.whatsapp ?? "",
+      company: item.contact?.company ?? "",
+      country: item.contact?.country ?? "",
+      state: item.contact?.state ?? "",
+      city: item.contact?.city ?? "",
+      gclid: item.gclid ?? "",
       status: item.lead.status,
+      assignedUserId: item.lead.assignedUserId?.toHexString() ?? "",
       assigneeName: item.assignedUser?.name ?? "Unassigned",
       priority: item.lead.priority,
       createdAt: item.lead.createdAt.toISOString(),
@@ -334,6 +345,8 @@ export default async function LeadsPage({
               dynamicColumns={leadsData.dynamicColumns}
               canBulk={canPerformBulkActions(user.role)}
               canExport={canExportLeads(user.role)}
+              canEdit={canEditLeads(user.role) || canEditContacts(user.role)}
+              canAssign={canAssignLeads(user.role)}
               filterQuery={filterQuery}
             />
             <PaginationControls

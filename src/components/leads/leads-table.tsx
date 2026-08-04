@@ -1,16 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { bulkLeadAction } from "@/app/actions";
+import {
+  bulkLeadAction,
+  updateContactAction,
+  updateLeadAction,
+  updateLeadGclidAction,
+} from "@/app/actions";
 import { MobileRecordCard } from "@/components/shared/mobile-record-card";
 import { useGlobalLoading } from "@/components/shared/global-loading";
 import { formatDateIST } from "@/lib/datetime";
 import {
   LeadStatusBadge,
   PriorityBadge,
-  SourceBadge,
 } from "@/components/shared/status-badges";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,22 +23,26 @@ import {
   LEAD_STATUSES,
   LEAD_STATUS_LABELS,
 } from "@/lib/constants";
-import type {
-  LeadPriority,
-  LeadStatus,
-  SourceSystem,
-} from "@/types/lead";
+import type { LeadPriority, LeadStatus } from "@/types/lead";
 
 export interface SerializedLeadRow {
   id: string;
   leadNumber: string;
+  contactId: string;
+  websiteId: string;
   contactName: string;
   websiteName: string;
   service: string;
   phone: string;
   email: string;
-  sourceSystem: SourceSystem;
+  whatsapp: string;
+  company: string;
+  country: string;
+  state: string;
+  city: string;
+  gclid: string;
   status: LeadStatus;
+  assignedUserId: string;
   assigneeName: string;
   priority: LeadPriority;
   createdAt: string;
@@ -52,7 +60,14 @@ export interface DynamicColumn {
 }
 
 const selectClass =
-  "h-9 rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-[var(--surface)] px-2 text-sm text-[var(--ink)]";
+  "h-9 w-full min-w-[7rem] rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-[var(--surface)] px-2 text-sm text-[var(--ink)]";
+
+const inputClass =
+  "h-8 w-full min-w-[6rem] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-2 text-sm text-[var(--ink)] focus:border-[var(--border-strong)] focus:outline-none";
+
+function displayValue(value: string) {
+  return value.trim() ? value : "—";
+}
 
 export function LeadsTable({
   rows,
@@ -60,6 +75,8 @@ export function LeadsTable({
   dynamicColumns,
   canBulk,
   canExport,
+  canEdit,
+  canAssign,
   filterQuery,
 }: {
   rows: SerializedLeadRow[];
@@ -67,14 +84,28 @@ export function LeadsTable({
   dynamicColumns: DynamicColumn[];
   canBulk: boolean;
   canExport: boolean;
+  canEdit: boolean;
+  canAssign: boolean;
   filterQuery: string;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [localRows, setLocalRows] = useState(rows);
   const [bulkPending, startBulkTransition] = useTransition();
-  useGlobalLoading(bulkPending);
+  const [editPending, startEditTransition] = useTransition();
+  useGlobalLoading(bulkPending || editPending);
 
-  const allSelected = rows.length > 0 && selected.size === rows.length;
+  useEffect(() => {
+    setLocalRows(rows);
+  }, [rows]);
+
+  const allSelected = localRows.length > 0 && selected.size === localRows.length;
   const selectedIds = useMemo(() => Array.from(selected), [selected]);
+
+  function patchRow(id: string, patch: Partial<SerializedLeadRow>) {
+    setLocalRows((prev) =>
+      prev.map((row) => (row.id === id ? { ...row, ...patch } : row))
+    );
+  }
 
   function handleBulkSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -94,7 +125,7 @@ export function LeadsTable({
     if (allSelected) {
       setSelected(new Set());
     } else {
-      setSelected(new Set(rows.map((row) => row.id)));
+      setSelected(new Set(localRows.map((row) => row.id)));
     }
   }
 
@@ -117,6 +148,85 @@ export function LeadsTable({
 
   function exportFiltered() {
     window.location.href = `/api/v1/export/leads${filterQuery ? `?${filterQuery}` : ""}`;
+  }
+
+  function saveLeadFields(
+    row: SerializedLeadRow,
+    fields: Record<string, string>
+  ) {
+    startEditTransition(async () => {
+      const formData = new FormData();
+      for (const [key, value] of Object.entries(fields)) {
+        formData.set(key, value);
+      }
+      const result = await updateLeadAction(row.id, undefined, formData);
+      if (result.success) {
+        toast.success(result.message ?? "Lead updated.");
+      } else {
+        toast.error(result.message);
+        setLocalRows(rows);
+      }
+    });
+  }
+
+  function saveContactFields(row: SerializedLeadRow) {
+    if (!row.contactId) {
+      toast.error("This lead has no contact to edit.");
+      return;
+    }
+
+    const original = rows.find((item) => item.id === row.id);
+    if (
+      original &&
+      original.contactName === row.contactName &&
+      original.phone === row.phone &&
+      original.email === row.email
+    ) {
+      return;
+    }
+
+    startEditTransition(async () => {
+      const formData = new FormData();
+      formData.set("name", row.contactName.trim() || "Unknown");
+      formData.set("email", row.email);
+      formData.set("phone", row.phone);
+      formData.set("whatsapp", row.whatsapp);
+      formData.set("company", row.company);
+      formData.set("country", row.country);
+      formData.set("state", row.state);
+      formData.set("city", row.city);
+
+      const result = await updateContactAction(
+        row.contactId,
+        row.id,
+        row.websiteId,
+        undefined,
+        formData
+      );
+      if (result.success) {
+        toast.success(result.message ?? "Contact updated.");
+      } else {
+        toast.error(result.message);
+        setLocalRows(rows);
+      }
+    });
+  }
+
+  function saveGclid(row: SerializedLeadRow) {
+    const original = rows.find((item) => item.id === row.id);
+    const gclid = row.gclid.trim();
+    if (original && gclid === original.gclid) return;
+
+    patchRow(row.id, { gclid });
+    startEditTransition(async () => {
+      const result = await updateLeadGclidAction(row.id, gclid);
+      if (result.success) {
+        toast.success(result.message ?? "GCLID updated.");
+      } else {
+        toast.error(result.message);
+        setLocalRows(rows);
+      }
+    });
   }
 
   return (
@@ -217,7 +327,7 @@ export function LeadsTable({
 
       {/* Mobile record cards */}
       <div className="space-y-2 md:hidden">
-        {rows.map((item) => (
+        {localRows.map((item) => (
           <div key={item.id} className="relative">
             {canBulk ? (
               <label className="absolute left-3 top-3 z-10">
@@ -233,12 +343,12 @@ export function LeadsTable({
             <MobileRecordCard
               href={`/leads/${item.id}`}
               title={item.leadNumber}
-              subtitle={item.contactName}
+              subtitle={displayValue(item.contactName)}
               status={<LeadStatusBadge status={item.status} />}
               className={canBulk ? "pl-10" : undefined}
               meta={[
                 { label: "Website", value: item.websiteName },
-                { label: "Service", value: item.service || "—" },
+                { label: "Service", value: displayValue(item.service) },
                 { label: "Owner", value: item.assigneeName || "Unassigned" },
                 {
                   label: "Received",
@@ -274,7 +384,7 @@ export function LeadsTable({
               {dynamicColumns.map((column) => (
                 <th key={column.id}>{column.label}</th>
               ))}
-              <th>Source</th>
+              <th>GCLID</th>
               <th>Status</th>
               <th>Assignee</th>
               <th>Priority</th>
@@ -282,7 +392,7 @@ export function LeadsTable({
             </tr>
           </thead>
           <tbody>
-            {rows.map((item) => (
+            {localRows.map((item) => (
               <tr
                 key={item.id}
                 data-selected={selected.has(item.id) ? "true" : undefined}
@@ -305,25 +415,215 @@ export function LeadsTable({
                     {item.leadNumber}
                   </Link>
                 </td>
-                <td>{item.contactName}</td>
+                <td>
+                  {canEdit && item.contactId ? (
+                    <input
+                      className={inputClass}
+                      value={item.contactName}
+                      aria-label={`Contact for ${item.leadNumber}`}
+                      onChange={(event) =>
+                        patchRow(item.id, { contactName: event.target.value })
+                      }
+                      onBlur={(event) => {
+                        const value = event.target.value;
+                        const next = { ...item, contactName: value };
+                        patchRow(item.id, { contactName: value });
+                        saveContactFields(next);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.currentTarget.blur();
+                        }
+                      }}
+                    />
+                  ) : (
+                    displayValue(item.contactName)
+                  )}
+                </td>
                 <td>{item.websiteName}</td>
-                <td>{item.service}</td>
-                <td className="font-mono-id text-xs">{item.phone}</td>
-                <td className="font-mono-id text-xs">{item.email}</td>
+                <td>
+                  {canEdit ? (
+                    <input
+                      className={inputClass}
+                      value={item.service}
+                      aria-label={`Service for ${item.leadNumber}`}
+                      onChange={(event) =>
+                        patchRow(item.id, { service: event.target.value })
+                      }
+                      onBlur={(event) => {
+                        const value = event.target.value;
+                        const original = rows.find((row) => row.id === item.id);
+                        if (!original || value === original.service) return;
+                        saveLeadFields(item, { service: value });
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.currentTarget.blur();
+                        }
+                      }}
+                    />
+                  ) : (
+                    displayValue(item.service)
+                  )}
+                </td>
+                <td>
+                  {canEdit && item.contactId ? (
+                    <input
+                      className={`${inputClass} font-mono-id text-xs`}
+                      value={item.phone}
+                      aria-label={`Phone for ${item.leadNumber}`}
+                      onChange={(event) =>
+                        patchRow(item.id, { phone: event.target.value })
+                      }
+                      onBlur={(event) => {
+                        const value = event.target.value;
+                        const next = { ...item, phone: value };
+                        patchRow(item.id, { phone: value });
+                        saveContactFields(next);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.currentTarget.blur();
+                        }
+                      }}
+                    />
+                  ) : (
+                    <span className="font-mono-id text-xs">
+                      {displayValue(item.phone)}
+                    </span>
+                  )}
+                </td>
+                <td>
+                  {canEdit && item.contactId ? (
+                    <input
+                      className={`${inputClass} font-mono-id text-xs`}
+                      value={item.email}
+                      aria-label={`Email for ${item.leadNumber}`}
+                      onChange={(event) =>
+                        patchRow(item.id, { email: event.target.value })
+                      }
+                      onBlur={(event) => {
+                        const value = event.target.value;
+                        const next = { ...item, email: value };
+                        patchRow(item.id, { email: value });
+                        saveContactFields(next);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.currentTarget.blur();
+                        }
+                      }}
+                    />
+                  ) : (
+                    <span className="font-mono-id text-xs">
+                      {displayValue(item.email)}
+                    </span>
+                  )}
+                </td>
                 {dynamicColumns.map((column) => (
                   <td key={column.id}>
                     {item.dynamicValues[column.id] ?? "—"}
                   </td>
                 ))}
                 <td>
-                  <SourceBadge source={item.sourceSystem} />
+                  {canEdit ? (
+                    <input
+                      className={`${inputClass} max-w-[10rem] truncate font-mono-id text-xs`}
+                      value={item.gclid}
+                      aria-label={`GCLID for ${item.leadNumber}`}
+                      onChange={(event) =>
+                        patchRow(item.id, { gclid: event.target.value })
+                      }
+                      onBlur={(event) => {
+                        const value = event.target.value.trim();
+                        const next = { ...item, gclid: value };
+                        patchRow(item.id, { gclid: value });
+                        saveGclid(next);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.currentTarget.blur();
+                        }
+                      }}
+                    />
+                  ) : (
+                    <span className="font-mono-id text-xs">
+                      {displayValue(item.gclid)}
+                    </span>
+                  )}
                 </td>
                 <td>
-                  <LeadStatusBadge status={item.status} />
+                  {canEdit ? (
+                    <select
+                      className={selectClass}
+                      value={item.status}
+                      aria-label={`Status for ${item.leadNumber}`}
+                      onChange={(event) => {
+                        const status = event.target.value as LeadStatus;
+                        if (status === item.status) return;
+                        patchRow(item.id, { status });
+                        saveLeadFields(item, { status });
+                      }}
+                    >
+                      {LEAD_STATUSES.map((status) => (
+                        <option key={status} value={status}>
+                          {LEAD_STATUS_LABELS[status]}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <LeadStatusBadge status={item.status} />
+                  )}
                 </td>
-                <td>{item.assigneeName}</td>
                 <td>
-                  <PriorityBadge priority={item.priority} />
+                  {canEdit && canAssign ? (
+                    <select
+                      className={selectClass}
+                      value={item.assignedUserId}
+                      aria-label={`Assignee for ${item.leadNumber}`}
+                      onChange={(event) => {
+                        const assignedUserId = event.target.value;
+                        if (assignedUserId === item.assignedUserId) return;
+                        const assigneeName =
+                          users.find((user) => user.id === assignedUserId)
+                            ?.name ?? "Unassigned";
+                        patchRow(item.id, { assignedUserId, assigneeName });
+                        saveLeadFields(item, { assignedUserId });
+                      }}
+                    >
+                      <option value="">Unassigned</option>
+                      {users.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    item.assigneeName
+                  )}
+                </td>
+                <td>
+                  {canEdit ? (
+                    <select
+                      className={selectClass}
+                      value={item.priority}
+                      aria-label={`Priority for ${item.leadNumber}`}
+                      onChange={(event) => {
+                        const priority = event.target.value as LeadPriority;
+                        if (priority === item.priority) return;
+                        patchRow(item.id, { priority });
+                        saveLeadFields(item, { priority });
+                      }}
+                    >
+                      {LEAD_PRIORITIES.map((priority) => (
+                        <option key={priority} value={priority}>
+                          {LEAD_PRIORITY_LABELS[priority]}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <PriorityBadge priority={item.priority} />
+                  )}
                 </td>
                 <td className="font-mono-id text-xs">
                   {formatDateIST(item.createdAt)}

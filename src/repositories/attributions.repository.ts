@@ -23,6 +23,63 @@ export async function findAttributionByLeadId(
   });
 }
 
+export async function findAttributionsByLeadIds(
+  leadIds: string[]
+): Promise<Pick<LeadAttribution, "leadId" | "gclid">[]> {
+  if (leadIds.length === 0) {
+    return [];
+  }
+
+  const db = await getDb();
+  return db
+    .collection<LeadAttribution>(COLLECTIONS.leadAttributions)
+    .find(
+      {
+        leadId: { $in: leadIds.map((id) => new ObjectId(id)) },
+        touchType: "submission",
+      },
+      { projection: { leadId: 1, gclid: 1 } }
+    )
+    .toArray();
+}
+
+export async function upsertLeadGclid(options: {
+  leadId: ObjectId;
+  contactId: ObjectId;
+  websiteId: ObjectId;
+  gclid: string | undefined;
+}): Promise<void> {
+  const db = await getDb();
+  const collection = db.collection<LeadAttribution>(COLLECTIONS.leadAttributions);
+  const filter = {
+    leadId: options.leadId,
+    touchType: "submission" as const,
+  };
+
+  const existing = await collection.findOne(filter);
+  if (existing) {
+    if (options.gclid) {
+      await collection.updateOne(filter, { $set: { gclid: options.gclid } });
+    } else {
+      await collection.updateOne(filter, { $unset: { gclid: "" } });
+    }
+    return;
+  }
+
+  if (!options.gclid) {
+    return;
+  }
+
+  await createAttribution({
+    leadId: options.leadId,
+    contactId: options.contactId,
+    websiteId: options.websiteId,
+    gclid: options.gclid,
+    touchType: "submission",
+    capturedAt: new Date(),
+  });
+}
+
 export async function findLeadIdsWithGclid(
   websiteIds?: string[] | null
 ): Promise<ObjectId[]> {
