@@ -1,6 +1,7 @@
 import { ObjectId } from "mongodb";
 import { ApiError } from "@/lib/api-auth";
 import {
+  coalesceGclidParts,
   extractAttributionFromRawPayload,
 } from "@/lib/attribution-payload";
 import { verifyApiKey } from "@/lib/crypto";
@@ -195,6 +196,7 @@ function mergeAttributionSources(
   >
 ): ReturnType<typeof extractAttributionFromRawPayload> | undefined {
   const merged: Record<string, string> = {};
+  const gclidParts: string[] = [];
 
   for (const source of sources) {
     if (!source) {
@@ -206,9 +208,18 @@ function mergeAttributionSources(
         continue;
       }
       if (typeof value === "string" && value.trim().length > 0) {
+        if (key === "gclid") {
+          gclidParts.push(value.trim());
+          continue;
+        }
         merged[key] = value.trim();
       }
     }
+  }
+
+  const gclid = coalesceGclidParts(gclidParts);
+  if (gclid) {
+    merged.gclid = gclid;
   }
 
   return Object.keys(merged).length > 0 ? merged : undefined;

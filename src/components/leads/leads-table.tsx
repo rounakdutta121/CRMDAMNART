@@ -60,10 +60,10 @@ export interface DynamicColumn {
 }
 
 const selectClass =
-  "h-9 w-full min-w-[7rem] rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-[var(--surface)] px-2 text-sm text-[var(--ink)]";
+  "ledger-inline-select h-8 w-full min-w-[7.5rem] cursor-pointer rounded-[var(--radius-md)] border-0 bg-transparent py-0 pl-1 pr-6 text-sm text-[var(--ink)] hover:bg-[var(--surface-muted)] focus:bg-[var(--surface)] focus:outline-none focus:ring-1 focus:ring-[var(--border-strong)]";
 
 const inputClass =
-  "h-8 w-full min-w-[6rem] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-2 text-sm text-[var(--ink)] focus:border-[var(--border-strong)] focus:outline-none";
+  "ledger-inline-input h-8 w-full min-w-[4rem] border-0 bg-transparent px-1 text-sm text-[var(--ink)] hover:bg-[var(--surface-muted)] focus:bg-[var(--surface)] focus:outline-none focus:ring-1 focus:ring-[var(--border-strong)]";
 
 function displayValue(value: string) {
   return value.trim() ? value : "—";
@@ -377,6 +377,7 @@ export function LeadsTable({
               ) : null}
               <th className={canBulk ? undefined : "sticky-col"}>Lead #</th>
               <th>Contact</th>
+              <th>Created</th>
               <th>Website</th>
               <th>Service</th>
               <th>Phone</th>
@@ -388,7 +389,6 @@ export function LeadsTable({
               <th>Status</th>
               <th>Assignee</th>
               <th>Priority</th>
-              <th>Created</th>
             </tr>
           </thead>
           <tbody>
@@ -440,12 +440,16 @@ export function LeadsTable({
                     displayValue(item.contactName)
                   )}
                 </td>
+                <td className="font-mono-id text-xs whitespace-nowrap">
+                  {formatDateIST(item.createdAt)}
+                </td>
                 <td>{item.websiteName}</td>
                 <td>
                   {canEdit ? (
                     <input
                       className={inputClass}
                       value={item.service}
+                      placeholder="—"
                       aria-label={`Service for ${item.leadNumber}`}
                       onChange={(event) =>
                         patchRow(item.id, { service: event.target.value })
@@ -471,6 +475,7 @@ export function LeadsTable({
                     <input
                       className={`${inputClass} font-mono-id text-xs`}
                       value={item.phone}
+                      placeholder="—"
                       aria-label={`Phone for ${item.leadNumber}`}
                       onChange={(event) =>
                         patchRow(item.id, { phone: event.target.value })
@@ -498,6 +503,7 @@ export function LeadsTable({
                     <input
                       className={`${inputClass} font-mono-id text-xs`}
                       value={item.email}
+                      placeholder="—"
                       aria-label={`Email for ${item.leadNumber}`}
                       onChange={(event) =>
                         patchRow(item.id, { email: event.target.value })
@@ -528,8 +534,10 @@ export function LeadsTable({
                 <td>
                   {canEdit ? (
                     <input
-                      className={`${inputClass} max-w-[10rem] truncate font-mono-id text-xs`}
+                      className={`${inputClass} max-w-[12rem] font-mono-id text-xs`}
                       value={item.gclid}
+                      placeholder="—"
+                      title={item.gclid || undefined}
                       aria-label={`GCLID for ${item.leadNumber}`}
                       onChange={(event) =>
                         patchRow(item.id, { gclid: event.target.value })
@@ -547,7 +555,10 @@ export function LeadsTable({
                       }}
                     />
                   ) : (
-                    <span className="font-mono-id text-xs">
+                    <span
+                      className="font-mono-id text-xs"
+                      title={item.gclid || undefined}
+                    >
                       {displayValue(item.gclid)}
                     </span>
                   )}
@@ -624,9 +635,6 @@ export function LeadsTable({
                   ) : (
                     <PriorityBadge priority={item.priority} />
                   )}
-                </td>
-                <td className="font-mono-id text-xs">
-                  {formatDateIST(item.createdAt)}
                 </td>
               </tr>
             ))}

@@ -13,6 +13,10 @@ import {
 } from "@/repositories/leads.repository";
 import { findContactById } from "@/repositories/contacts.repository";
 import { findAttributionsByLeadIds } from "@/repositories/attributions.repository";
+import {
+  coalesceGclidParts,
+  gclidPartsFromFormFields,
+} from "@/lib/attribution-payload";
 import { listAssignableUsers } from "@/repositories/users.repository";
 import { listWebsites } from "@/repositories/websites.repository";
 import type { LeadListItem } from "@/services/leads.service";
@@ -170,7 +174,10 @@ export async function getMonthlyLeadsPage(
       assignedUser: lead.assignedUserId
         ? userMap.get(lead.assignedUserId.toHexString()) ?? null
         : null,
-      gclid: gclidMap.get(lead._id.toHexString()) ?? null,
+      gclid: coalesceGclidParts([
+        gclidMap.get(lead._id.toHexString()),
+        ...gclidPartsFromFormFields(lead.formFieldValues),
+      ]),
     }));
   }
 

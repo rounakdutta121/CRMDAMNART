@@ -40,6 +40,10 @@ import {
   findLeadIdsWithGclid,
   upsertLeadGclid,
 } from "@/repositories/attributions.repository";
+import {
+  coalesceGclidParts,
+  gclidPartsFromFormFields,
+} from "@/lib/attribution-payload";
 import { findServiceById, listServicesForWebsite } from "@/repositories/services.repository";
 import { findContactById, findDuplicateContacts, deleteContactById } from "@/repositories/contacts.repository";
 import {
@@ -328,7 +332,10 @@ export async function getLeadsPage(
     assignedUser: lead.assignedUserId
       ? userMap.get(lead.assignedUserId.toHexString()) ?? null
       : null,
-    gclid: gclidMap.get(lead._id.toHexString()) ?? null,
+    gclid: coalesceGclidParts([
+      gclidMap.get(lead._id.toHexString()),
+      ...gclidPartsFromFormFields(lead.formFieldValues),
+    ]),
   }));
 
   const forms =
@@ -415,11 +422,31 @@ export async function getLeadDetail(
   const { apiKeyHash: _apiKeyHash, ...safeWebsite } = websiteDoc;
   void _apiKeyHash;
 
+  const resolvedGclid = coalesceGclidParts([
+    attribution?.gclid,
+    ...gclidPartsFromFormFields(lead.formFieldValues),
+  ]);
+
+  const attributionWithGclid =
+    attribution || resolvedGclid
+      ? {
+          ...(attribution ?? {
+            _id: lead._id,
+            leadId: lead._id,
+            contactId: lead.contactId,
+            websiteId: lead.websiteId,
+            touchType: "submission" as const,
+            capturedAt: lead.createdAt,
+          }),
+          gclid: resolvedGclid ?? attribution?.gclid,
+        }
+      : null;
+
   return {
     lead,
     contact,
     website: safeWebsite,
-    attribution: canViewAttribution(user.role) ? attribution : null,
+    attribution: canViewAttribution(user.role) ? attributionWithGclid : null,
     activities,
     assignedUser: assigned
       ? (() => {

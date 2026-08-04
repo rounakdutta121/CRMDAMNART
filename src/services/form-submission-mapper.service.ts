@@ -14,6 +14,7 @@ import {
   flattenPayload,
   resolveFieldValue,
 } from "@/lib/safe-field-resolver";
+import { coalesceGclidParts } from "@/lib/attribution-payload";
 import type { LeadPriority } from "@/types/lead";
 import type {
   ContactIdentityRule,
@@ -498,6 +499,13 @@ function setAttributionValue(
   }
 
   if (typeof value === "string" && value.length > 0) {
+    if (key === "gclid" && attributionData.gclid) {
+      const merged = coalesceGclidParts([attributionData.gclid, value]);
+      if (merged) {
+        attributionData.gclid = merged;
+      }
+      return;
+    }
     attributionData[key] = value;
   }
 }
