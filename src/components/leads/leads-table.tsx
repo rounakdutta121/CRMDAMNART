@@ -11,7 +11,7 @@ import {
 } from "@/app/actions";
 import { MobileRecordCard } from "@/components/shared/mobile-record-card";
 import { useGlobalLoading } from "@/components/shared/global-loading";
-import { formatDateIST } from "@/lib/datetime";
+import { formatDateTimeIST } from "@/lib/datetime";
 import {
   LeadStatusBadge,
   PriorityBadge,
@@ -352,7 +352,7 @@ export function LeadsTable({
                 { label: "Owner", value: item.assigneeName || "Unassigned" },
                 {
                   label: "Received",
-                  value: formatDateIST(item.createdAt),
+                  value: formatDateTimeIST(item.createdAt),
                 },
               ]}
             />
@@ -441,7 +441,7 @@ export function LeadsTable({
                   )}
                 </td>
                 <td className="font-mono-id text-xs whitespace-nowrap">
-                  {formatDateIST(item.createdAt)}
+                  {formatDateTimeIST(item.createdAt)}
                 </td>
                 <td>{item.websiteName}</td>
                 <td>
