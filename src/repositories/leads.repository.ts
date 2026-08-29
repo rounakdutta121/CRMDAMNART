@@ -140,6 +140,26 @@ export async function findLeadByExternalSubmission(
   });
 }
 
+export async function findRecentLeadBySubmissionFingerprint(
+  websiteId: string,
+  formId: string,
+  submissionFingerprint: string,
+  windowMs: number
+): Promise<Lead | null> {
+  const db = await getDb();
+  const cutoff = new Date(Date.now() - windowMs);
+
+  return db.collection<Lead>(COLLECTIONS.leads).findOne(
+    {
+      websiteId: new ObjectId(websiteId),
+      formId: new ObjectId(formId),
+      submissionFingerprint,
+      createdAt: { $gte: cutoff },
+    },
+    { sort: { createdAt: 1 } }
+  );
+}
+
 export async function createLead(data: Omit<Lead, "_id">): Promise<Lead> {
   const db = await getDb();
   const _id = new ObjectId();

@@ -44,6 +44,7 @@ export interface Lead {
   formFieldValues?: LeadFormFieldValue[];
   isTestLead?: boolean;
   externalSubmissionId?: string;
+  submissionFingerprint?: string;
   sourceSystem: SourceSystem;
   serviceId?: ObjectId;
   service?: string;

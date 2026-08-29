@@ -82,6 +82,18 @@ export async function ensureIndexes(): Promise<void> {
       key: { websiteId: 1, formId: 1, createdAt: -1 },
       name: "leads_websiteId_formId_createdAt",
     },
+    {
+      key: {
+        websiteId: 1,
+        formId: 1,
+        submissionFingerprint: 1,
+        createdAt: -1,
+      },
+      name: "leads_webhook_dedup_lookup",
+      partialFilterExpression: {
+        submissionFingerprint: { $type: "string" },
+      },
+    },
     { key: { formId: 1, createdAt: -1 }, name: "leads_formId_createdAt" },
     { key: { serviceId: 1, createdAt: -1 }, name: "leads_serviceId_createdAt" },
     {

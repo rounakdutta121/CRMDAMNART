@@ -15,6 +15,10 @@ import {
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { collectPayloadFieldNames } from "@/lib/safe-field-resolver";
 import {
+  buildWebhookSubmissionFingerprint,
+  WEBHOOK_DEDUP_WINDOW_MS,
+} from "@/lib/webhook-submission-fingerprint";
+import {
   webhookLeadSchema,
   type WebhookLeadInput,
 } from "@/lib/validation/webhook.schema";
@@ -31,7 +35,7 @@ import {
   findLegacyDefaultForm,
 } from "@/repositories/forms.repository";
 import { createIntegrationLog } from "@/repositories/integration-logs.repository";
-import { createLead, findLeadByExternalSubmission } from "@/repositories/leads.repository";
+import { createLead, findLeadByExternalSubmission, findRecentLeadBySubmissionFingerprint } from "@/repositories/leads.repository";
 import {
   findServiceByCode,
   findServiceById,
@@ -115,6 +119,37 @@ function stripMetadataForMapping(
     }
   }
   return stripped;
+}
+
+function buildSubmissionFingerprint(
+  websiteId: ObjectId,
+  formId: ObjectId,
+  rawPayload: Record<string, unknown>
+): string {
+  return buildWebhookSubmissionFingerprint(
+    websiteId.toHexString(),
+    formId.toHexString(),
+    stripMetadataForMapping(rawPayload)
+  );
+}
+
+async function findRecentWebhookDuplicate(options: {
+  websiteId: ObjectId;
+  formId: ObjectId;
+  rawPayload: Record<string, unknown>;
+}): Promise<Awaited<ReturnType<typeof findRecentLeadBySubmissionFingerprint>>> {
+  const submissionFingerprint = buildSubmissionFingerprint(
+    options.websiteId,
+    options.formId,
+    options.rawPayload
+  );
+
+  return findRecentLeadBySubmissionFingerprint(
+    options.websiteId.toHexString(),
+    options.formId.toHexString(),
+    submissionFingerprint,
+    WEBHOOK_DEDUP_WINDOW_MS
+  );
 }
 
 function hasAttributionData(
@@ -536,6 +571,28 @@ export async function ingestWebhookLead(
       }
     }
 
+    const submissionFingerprint = buildSubmissionFingerprint(
+      website._id,
+      resolvedForm._id,
+      options.rawPayload
+    );
+
+    const recentDuplicate = await findRecentWebhookDuplicate({
+      websiteId: website._id,
+      formId: resolvedForm._id,
+      rawPayload: options.rawPayload,
+    });
+    if (recentDuplicate) {
+      logStatus = "idempotent_replay";
+      logLeadId = recentDuplicate._id;
+      return {
+        leadId: recentDuplicate._id.toHexString(),
+        contactId: recentDuplicate.contactId.toHexString(),
+        leadNumber: recentDuplicate.leadNumber,
+        idempotentReplay: true,
+      };
+    }
+
     const sourceSystem = mapSourceSystem(options.rawPayload.sourceSystem);
     const explicitAssignedUserId = normalizeOptionalString(
       options.rawPayload.assignedUserId as string | undefined
@@ -595,6 +652,7 @@ export async function ingestWebhookLead(
         formFieldValues: legacyMapped?.formFieldValues,
         isTestLead,
         externalSubmissionId,
+        submissionFingerprint,
         sourceSystem: (payload.sourceSystem ?? sourceSystem) as SourceSystem,
         serviceId: service?._id,
         service: normalizeOptionalString(payload.service) ?? service?.name,
@@ -759,6 +817,7 @@ export async function ingestWebhookLead(
       formFieldValues: mapped.customFieldValues,
       isTestLead,
       externalSubmissionId,
+      submissionFingerprint,
       sourceSystem,
       serviceId: service?._id ?? resolvedForm.defaultServiceId,
       service: mapped.leadData.service ?? service?.name,
