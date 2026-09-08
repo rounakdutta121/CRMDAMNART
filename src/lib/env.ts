@@ -26,6 +26,8 @@ const serverEnvSchema = z.object({
   LOGIN_BLOCK_MINUTES: z.coerce.number().int().positive().optional(),
   WEBHOOK_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().optional(),
   WEBHOOK_RATE_LIMIT_PER_HOUR: z.coerce.number().int().positive().optional(),
+  AGENT_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().optional(),
+  AGENT_RATE_LIMIT_PER_HOUR: z.coerce.number().int().positive().optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
@@ -46,6 +48,8 @@ function readProcessEnv(): Record<string, string | undefined> {
     LOGIN_BLOCK_MINUTES: process.env.LOGIN_BLOCK_MINUTES,
     WEBHOOK_RATE_LIMIT_PER_MINUTE: process.env.WEBHOOK_RATE_LIMIT_PER_MINUTE,
     WEBHOOK_RATE_LIMIT_PER_HOUR: process.env.WEBHOOK_RATE_LIMIT_PER_HOUR,
+    AGENT_RATE_LIMIT_PER_MINUTE: process.env.AGENT_RATE_LIMIT_PER_MINUTE,
+    AGENT_RATE_LIMIT_PER_HOUR: process.env.AGENT_RATE_LIMIT_PER_HOUR,
   };
 }
 

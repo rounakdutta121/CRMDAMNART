@@ -3,6 +3,7 @@ import { writeAuditLog } from "@/lib/audit";
 import { hashPassword } from "@/lib/crypto";
 import { normalizeEmail } from "@/lib/normalization";
 import {
+  canAccessAllWebsites,
   canManageUsers,
   canTransferLeads,
   defaultCanReceiveLeadAssignments,
@@ -29,13 +30,32 @@ import { createAssignmentHistory } from "@/repositories/assignment-history.repos
 import { notifyLeadAssignment } from "@/repositories/notifications.repository";
 import type { SessionUser, SafeCRMUser, UserRole } from "@/types/auth";
 
+function filterUsersForActor(
+  actor: SessionUser,
+  users: SafeCRMUser[]
+): SafeCRMUser[] {
+  if (canAccessAllWebsites(actor.role)) {
+    return users;
+  }
+
+  const permitted = new Set(actor.permittedWebsiteIds);
+  return users.filter((target) => {
+    if (target.role === "super_admin") {
+      return false;
+    }
+    return target.permittedWebsiteIds.some((id) =>
+      permitted.has(id.toHexString())
+    );
+  });
+}
+
 export async function getUsersForAdmin(
   user: SessionUser
 ): Promise<SafeCRMUser[]> {
   if (!canManageUsers(user.role)) {
     throw new PermissionError("You are not allowed to manage users.");
   }
-  return listUsers();
+  return filterUsersForActor(user, await listUsers());
 }
 
 export async function getUserForAdmin(
@@ -53,7 +73,11 @@ export async function getUserForAdmin(
 
   const { passwordHash: _, ...safe } = target;
   void _;
-  return safe;
+  const [filtered] = filterUsersForActor(user, [safe]);
+  if (!filtered) {
+    throw new PermissionError("You do not have access to this user.");
+  }
+  return filtered;
 }
 
 export async function createUserForAdmin(

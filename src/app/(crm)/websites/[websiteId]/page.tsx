@@ -15,14 +15,11 @@ import { deleteWebsiteAction } from "@/app/actions";
 
 export default async function WebsiteDetailPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ websiteId: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const user = await requireSession();
   const { websiteId } = await params;
-  const query = await searchParams;
 
   let website;
   try {
@@ -33,8 +30,6 @@ export default async function WebsiteDetailPage({
 
   const appUrl = process.env.APP_URL ?? process.env.AUTH_URL ?? "http://localhost:3000";
   const webhookUrl = `${appUrl}/api/v1/webhooks/leads/${website.webhookKey}`;
-  const apiKeyOnce =
-    typeof query.apiKey === "string" ? decodeURIComponent(query.apiKey) : null;
 
   return (
     <div>
@@ -57,14 +52,12 @@ export default async function WebsiteDetailPage({
             <Button asChild variant="outline">
               <Link href={`/websites/${websiteId}/forms`}>Manage forms</Link>
             </Button>
-            {website.isActive ? (
-              <DeleteEntityButton
-                label="Delete website"
-                confirmMessage={`Delete website "${website.name}"? It will be deactivated and stop accepting webhook leads.`}
-                redirectTo="/websites"
-                action={deleteWebsiteAction.bind(null, websiteId)}
-              />
-            ) : null}
+            <DeleteEntityButton
+              label="Delete permanently"
+              confirmMessage={`Permanently delete website "${website.name}" from the database? Forms and shares for this site will also be removed. This cannot be undone. Sites with leads cannot be deleted.`}
+              redirectTo="/websites"
+              action={deleteWebsiteAction.bind(null, websiteId)}
+            />
           </div>
         ) : (
           <Button asChild variant="outline">
@@ -81,18 +74,6 @@ export default async function WebsiteDetailPage({
           <Link href={`/websites/${websiteId}/team`}>Team</Link>
         </Button>
       </div>
-
-      {apiKeyOnce ? (
-        <Card className="mb-4 border-amber-200 bg-[var(--warning-muted)]">
-          <CardHeader>
-            <CardTitle className="text-amber-900">API key (shown once)</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <code className="break-all text-sm text-amber-950">{apiKeyOnce}</code>
-            <CopyButton value={apiKeyOnce} label="Copy API key" />
-          </CardContent>
-        </Card>
-      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

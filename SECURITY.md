@@ -60,6 +60,17 @@ Include:
 - MongoDB-backed rate limiting (default: 60/minute, 300/hour per website)
 - Idempotency keys prevent duplicate lead creation on retries
 
+## AI Agent API Authentication
+
+- Dedicated agent API keys (`da_ag_…`) under `/api/v1/agent/*` — never reuse website webhook keys
+- Keys are stored as SHA-256 hashes; plaintext shown once on create/rotate
+- Each agent has explicit **scopes** and a **website allowlist** (or deliberate `websites:all`)
+- Inactive or expired agents are rejected
+- MongoDB-backed rate limiting (default: 120/minute, 2000/hour per agent; override with `AGENT_RATE_LIMIT_*`)
+- Request bodies capped like webhooks; audit logs use `actingSystem: ai_agent:<id>` where applicable
+- Create and revoke agents only from CRM Settings → AI Agents (admins / super admins)
+- Default new agents are read-only; grant write scopes deliberately
+
 ## API Key Rotation
 
 Regenerate website API keys from the CRM after suspected compromise. Old keys stop working immediately after regeneration. Update all integrations (forms, n8n, Apps Script) with the new key.
@@ -114,8 +125,9 @@ Use MongoDB Atlas backups appropriate to your tier. Test restore procedures peri
 
 ## Incident Response Basics
 
-1. Rotate compromised secrets (`AUTH_SECRET`, API keys)
+1. Rotate compromised secrets (`AUTH_SECRET`, API keys, AI agent keys)
 2. Invalidate affected user sessions (`sessionVersion` increment or deactivation)
 3. Revoke compromised dashboard shares
+4. Deactivate or delete compromised AI agents in Settings → AI Agents
 4. Review audit and integration logs
 5. Redeploy a known-good Vercel deployment if application code is suspected

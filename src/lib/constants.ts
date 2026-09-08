@@ -30,6 +30,7 @@ export const COLLECTIONS = {
   dashboardSharePasswordAttempts: "dashboardSharePasswordAttempts",
   loginAttempts: "loginAttempts",
   rateLimitRecords: "rateLimitRecords",
+  aiAgents: "aiAgents",
 } as const;
 
 export const INVITATION_EXPIRY_HOURS = [24, 72, 168, 336] as const;
@@ -167,6 +168,7 @@ export const SOURCE_SYSTEMS: SourceSystem[] = [
   "apps_script",
   "manual",
   "import",
+  "agent",
 ];
 
 export const SOURCE_SYSTEM_LABELS: Record<SourceSystem, string> = {
@@ -175,6 +177,7 @@ export const SOURCE_SYSTEM_LABELS: Record<SourceSystem, string> = {
   apps_script: "Google Apps Script",
   manual: "Manual",
   import: "Import",
+  agent: "AI Agent",
 };
 
 export const FOLLOW_UP_METHODS: FollowUpMethod[] = [

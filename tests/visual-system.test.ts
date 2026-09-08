@@ -15,10 +15,11 @@ describe("archival design system", () => {
 
   it("uses editorial font variables in root layout", () => {
     const layout = readFileSync(join(process.cwd(), "src/app/layout.tsx"), "utf8");
-    expect(layout).toContain("Source_Serif_4");
-    expect(layout).toContain("IBM_Plex_Sans");
-    expect(layout).toContain("IBM_Plex_Mono");
+    expect(layout).toContain("SourceSerif4");
+    expect(layout).toContain("IBMPlexSans");
+    expect(layout).toContain("IBMPlexMono");
     expect(layout).toContain("--font-archive-serif");
+    expect(layout).toContain("next/font/local");
   });
 
   it("groups sidebar navigation into archival sections", () => {

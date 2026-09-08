@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireSession } from "@/lib/auth";
 import { exportLeadsToCsv } from "@/services/export-leads.service";
 import { PermissionError } from "@/lib/permissions";
 
@@ -7,13 +7,7 @@ export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json(
-        { success: false, error: { message: "Unauthorized." } },
-        { status: 401 }
-      );
-    }
+    const user = await requireSession();
 
     const params = request.nextUrl.searchParams;
     const idsParam = params.get("ids");
@@ -26,7 +20,7 @@ export async function GET(request: NextRequest) {
       "websiteId",
       "service",
       "status",
-            "priority",
+      "priority",
       "sourceSystem",
       "assignedUserId",
       "search",
@@ -38,7 +32,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const csv = await exportLeadsToCsv(session.user, {
+    const csv = await exportLeadsToCsv(user, {
       leadIds,
       filters: leadIds ? undefined : filters,
     });
@@ -56,6 +50,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: { message: error.message } },
         { status: 403 }
+      );
+    }
+    if (
+      error instanceof Error &&
+      (error.message === "UNAUTHORIZED" ||
+        error.message === "SESSION_INVALIDATED")
+    ) {
+      return NextResponse.json(
+        { success: false, error: { message: "Unauthorized." } },
+        { status: 401 }
       );
     }
     console.error("[export/leads]", error);

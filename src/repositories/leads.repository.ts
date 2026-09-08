@@ -208,6 +208,26 @@ export async function countLeadsForContact(contactId: string): Promise<number> {
   });
 }
 
+/** Distinct contact ids that have at least one lead on the given websites. */
+export async function findContactIdsWithLeadsOnWebsites(
+  websiteIds: string[] | null
+): Promise<ObjectId[]> {
+  const db = await getDb();
+  const match: Filter<Lead> = {};
+
+  if (websiteIds !== null) {
+    if (websiteIds.length === 0) {
+      return [];
+    }
+    match.websiteId = { $in: websiteIds.map((id) => new ObjectId(id)) };
+  }
+
+  const ids = await db
+    .collection<Lead>(COLLECTIONS.leads)
+    .distinct("contactId", match);
+  return ids.filter((id): id is ObjectId => Boolean(id) && id instanceof ObjectId);
+}
+
 export async function updateLead(
   id: string,
   update: Partial<Omit<Lead, "_id" | "createdAt" | "leadNumber">>

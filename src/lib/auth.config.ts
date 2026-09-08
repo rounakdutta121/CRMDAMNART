@@ -23,6 +23,7 @@ export const authConfig = {
       const isPublicShare = pathname.startsWith("/dashboard-share");
       const isPublicApi =
         pathname.startsWith("/api/v1/webhooks") ||
+        pathname.startsWith("/api/v1/agent") ||
         pathname.startsWith("/api/auth") ||
         pathname.startsWith("/api/health") ||
         pathname.startsWith("/api/v1/export") ||

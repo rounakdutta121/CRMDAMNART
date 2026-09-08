@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RenameEntityButton } from "@/components/shared/rename-entity-button";
-import { renameServiceAction } from "@/app/actions";
+import { DeleteEntityButton } from "@/components/shared/delete-entity-button";
+import { deleteServiceAction, renameServiceAction } from "@/app/actions";
 import { requireSession } from "@/lib/auth";
 import { canManageServices } from "@/lib/permissions";
 import { findUserById } from "@/repositories/users.repository";
@@ -76,6 +77,12 @@ export default async function ServiceDetailPage({
           <Button asChild variant="outline">
             <Link href={`/settings/services/${serviceId}/edit`}>Edit service</Link>
           </Button>
+          <DeleteEntityButton
+            label="Delete service"
+            confirmMessage="Permanently delete this service from the database? This cannot be undone."
+            redirectTo="/settings/services"
+            action={deleteServiceAction.bind(null, serviceId)}
+          />
         </div>
       </div>
 

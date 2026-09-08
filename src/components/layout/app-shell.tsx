@@ -15,6 +15,7 @@ import { signOut } from "next-auth/react";
 import {
   Building2,
   BookOpen,
+  Bot,
   Contact,
   LayoutDashboard,
   Settings,
@@ -52,13 +53,14 @@ import {
   canManageWebsites,
   canManageServices,
   canManageInvitations,
+  canManageAiAgents,
 } from "@/lib/permissions";
 
 type NavItem = {
   href: string;
   label: string;
   icon: typeof LayoutDashboard;
-  require?: "users" | "invitations" | "websites" | "services" | "none";
+  require?: "users" | "invitations" | "websites" | "services" | "aiAgents" | "none";
 };
 
 const commandItems: NavItem[] = [
@@ -102,6 +104,12 @@ const adminItems: NavItem[] = [
     icon: Settings,
     require: "websites",
   },
+  {
+    href: "/settings/ai-agents",
+    label: "AI Agents",
+    icon: Bot,
+    require: "aiAgents",
+  },
   { href: "/settings/roles", label: "Roles", icon: Settings },
   {
     href: "/settings/lead-statuses",
@@ -116,6 +124,7 @@ function isAllowed(user: SessionUser, item: NavItem): boolean {
   if (item.require === "invitations") return canManageInvitations(user.role);
   if (item.require === "websites") return canManageWebsites(user.role);
   if (item.require === "services") return canManageServices(user.role);
+  if (item.require === "aiAgents") return canManageAiAgents(user.role);
   return true;
 }
 

@@ -79,3 +79,11 @@ export async function updateService(
     }
   );
 }
+
+export async function deleteServiceById(id: string): Promise<boolean> {
+  const db = await getDb();
+  const result = await db
+    .collection<CRMService>(COLLECTIONS.services)
+    .deleteOne({ _id: new ObjectId(id) });
+  return result.deletedCount === 1;
+}

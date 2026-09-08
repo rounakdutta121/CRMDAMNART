@@ -60,17 +60,17 @@ function useGlobalLoadingApi() {
 
 /** Keeps the global loader in sync with a local pending flag. */
 export function useGlobalLoading(pending: boolean) {
-  const { begin, end } = useGlobalLoadingApi();
+  const context = useContext(GlobalLoadingContext);
 
   useEffect(() => {
-    if (!pending) {
+    if (!context || !pending) {
       return;
     }
-    begin();
+    context.begin();
     return () => {
-      end();
+      context.end();
     };
-  }, [pending, begin, end]);
+  }, [pending, context]);
 }
 
 export function GlobalLoadingSync({ pending }: { pending: boolean }) {

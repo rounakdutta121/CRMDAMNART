@@ -22,7 +22,10 @@ import {
   markContactMerged,
   updateContact,
 } from "@/repositories/contacts.repository";
-import { listLeads } from "@/repositories/leads.repository";
+import {
+  findContactIdsWithLeadsOnWebsites,
+  listLeads,
+} from "@/repositories/leads.repository";
 import { getDb } from "@/lib/mongodb";
 import { COLLECTIONS } from "@/lib/constants";
 import { ObjectId } from "mongodb";
@@ -118,14 +121,51 @@ export async function findOrCreateContact(input: {
   return { contact, created: true };
 }
 
-export async function getContactDetail(
+async function resolveAccessibleContactIds(
+  user: SessionUser
+): Promise<ObjectId[] | undefined> {
+  const websiteIds = resolveWebsiteFilter(user);
+  if (websiteIds === null) {
+    return undefined;
+  }
+  return findContactIdsWithLeadsOnWebsites(websiteIds);
+}
+
+async function assertUserCanAccessContact(
   user: SessionUser,
   contactId: string
-): Promise<{ contact: Contact; leads: Lead[] }> {
+): Promise<Contact> {
   const contact = await findContactById(contactId);
   if (!contact) {
     throw new Error("Contact not found.");
   }
+
+  const websiteIds = resolveWebsiteFilter(user);
+  if (websiteIds === null) {
+    return contact;
+  }
+
+  const { items: leads } = await listLeads({
+    filters: {
+      websiteIds,
+      contactIds: [contact._id],
+    },
+    skip: 0,
+    limit: 1,
+  });
+
+  if (leads.length === 0) {
+    throw new PermissionError("You do not have access to this contact.");
+  }
+
+  return contact;
+}
+
+export async function getContactDetail(
+  user: SessionUser,
+  contactId: string
+): Promise<{ contact: Contact; leads: Lead[] }> {
+  const contact = await assertUserCanAccessContact(user, contactId);
 
   const websiteIds = resolveWebsiteFilter(user);
   const { items: leads } = await listLeads({
@@ -144,15 +184,20 @@ export async function getContactsPage(
   user: SessionUser,
   searchParams: Record<string, string | string[] | undefined>
 ) {
-  void user;
   const pagination = parsePagination(searchParams);
   const search =
     typeof searchParams.search === "string" ? searchParams.search : undefined;
+
+  const contactIds = await resolveAccessibleContactIds(user);
+  if (contactIds && contactIds.length === 0) {
+    return buildPaginatedResult([], 0, pagination.page, pagination.pageSize);
+  }
 
   const { items, total } = await listContacts({
     search,
     skip: pagination.skip,
     limit: pagination.limit,
+    contactIds,
   });
 
   return buildPaginatedResult(items, total, pagination.page, pagination.pageSize);
@@ -168,10 +213,7 @@ export async function updateContactForUser(
     throw new PermissionError("You are not allowed to edit contacts.");
   }
 
-  const existing = await findContactById(contactId);
-  if (!existing) {
-    throw new Error("Contact not found.");
-  }
+  const existing = await assertUserCanAccessContact(user, contactId);
 
   if (websiteIdForAudit && !canAccessWebsite(user, websiteIdForAudit)) {
     throw new PermissionError("You do not have access to this website.");
@@ -217,10 +259,15 @@ export async function updateContactForUser(
 }
 
 export async function getDuplicateContactsPage(user: SessionUser) {
-  void user;
+  const contactIds = await resolveAccessibleContactIds(user);
+  if (contactIds && contactIds.length === 0) {
+    return [];
+  }
+
   const { items: contacts } = await listContacts({
     skip: 0,
     limit: 500,
+    contactIds,
   });
 
   const duplicateGroups: Array<{
@@ -238,11 +285,17 @@ export async function getDuplicateContactsPage(user: SessionUser) {
       excludeContactId: contact._id.toHexString(),
     });
 
-    if (duplicates.length > 0) {
+    const accessibleDuplicates = contactIds
+      ? duplicates.filter((dup) =>
+          contactIds.some((id) => id.equals(dup._id))
+        )
+      : duplicates;
+
+    if (accessibleDuplicates.length > 0) {
       seen.add(key);
       duplicateGroups.push({
         key,
-        contacts: [contact, ...duplicates],
+        contacts: [contact, ...accessibleDuplicates],
       });
     }
   }
@@ -259,12 +312,35 @@ export async function mergeContactsForUser(
   }
 
   const [primary, secondary] = await Promise.all([
-    findContactById(input.primaryContactId),
-    findContactById(input.secondaryContactId),
+    assertUserCanAccessContact(user, input.primaryContactId),
+    assertUserCanAccessContact(user, input.secondaryContactId),
   ]);
 
-  if (!primary || !secondary) {
-    throw new Error("One or both contacts were not found.");
+  const websiteIds = resolveWebsiteFilter(user);
+  if (websiteIds !== null) {
+    const [{ items: primaryLeads }, { items: secondaryLeads }] =
+      await Promise.all([
+        listLeads({
+          filters: { contactIds: [primary._id] },
+          skip: 0,
+          limit: 5000,
+        }),
+        listLeads({
+          filters: { contactIds: [secondary._id] },
+          skip: 0,
+          limit: 5000,
+        }),
+      ]);
+    const permitted = new Set(websiteIds);
+    const allLeads = [...primaryLeads, ...secondaryLeads];
+    const outOfScope = allLeads.some(
+      (lead) => !permitted.has(lead.websiteId.toHexString())
+    );
+    if (outOfScope) {
+      throw new PermissionError(
+        "Cannot merge contacts that have leads outside your website access."
+      );
+    }
   }
 
   const preserved =
@@ -306,7 +382,10 @@ export async function mergeContactsForUser(
     action: "contact.merged",
     entityType: "contact",
     entityId: input.primaryContactId,
-    previousValues: { secondaryContactId: input.secondaryContactId },
+    previousValues: {
+      secondaryContactId: input.secondaryContactId,
+      primaryName: primary.name,
+    },
     newValues: { primaryContactId: input.primaryContactId },
   });
 }

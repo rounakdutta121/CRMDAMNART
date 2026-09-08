@@ -7,6 +7,10 @@ export function generateApiKey(): string {
   return `da_${randomBytes(32).toString("base64url")}`;
 }
 
+export function generateAgentApiKey(): string {
+  return `da_ag_${randomBytes(32).toString("base64url")}`;
+}
+
 export function generateWebhookKey(): string {
   return randomBytes(16).toString("base64url");
 }

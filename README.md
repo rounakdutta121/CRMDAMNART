@@ -186,6 +186,39 @@ x-idempotency-key: UNIQUE_SUBMISSION_ID
 x-form-code: optional-form-code
 ```
 
+### AI Agent REST API
+
+Trusted AI agents use scoped keys issued in **Settings → AI Agents** (admins only). Do not put agent keys in Vercel env or seed scripts.
+
+```text
+Authorization: Bearer da_ag_…
+GET  /api/v1/agent/me
+GET  /api/v1/agent/leads
+GET  /api/v1/agent/leads/[leadId]
+POST /api/v1/agent/leads
+PATCH /api/v1/agent/leads/[leadId]
+DELETE /api/v1/agent/leads/[leadId]
+POST /api/v1/agent/leads/[leadId]/assign
+GET  /api/v1/agent/analytics/overview
+GET|POST /api/v1/agent/websites
+GET|PATCH|DELETE /api/v1/agent/websites/[websiteId]
+GET|POST /api/v1/agent/websites/[websiteId]/forms
+GET|PATCH|DELETE /api/v1/agent/websites/[websiteId]/forms/[formId]
+GET|POST /api/v1/agent/services
+GET|PATCH /api/v1/agent/services/[serviceId]
+GET  /api/v1/agent/contacts
+GET|PATCH /api/v1/agent/contacts/[contactId]
+POST /api/v1/agent/contacts/merge
+GET|POST /api/v1/agent/users
+```
+
+Scopes include `leads:read`, `leads:write`, `websites:write`, `analytics:read`, `websites:all`, etc. New agents default to read scopes. Rate limits: `AGENT_RATE_LIMIT_PER_MINUTE` / `AGENT_RATE_LIMIT_PER_HOUR`.
+
+```bash
+curl -s "$APP_URL/api/v1/agent/me" \
+  -H "Authorization: Bearer da_ag_YOUR_KEY"
+```
+
 ### Form-specific curl example
 
 ```bash

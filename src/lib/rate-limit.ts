@@ -45,6 +45,9 @@ export async function consumeRateLimit(
   const keyHash = hashRateLimitKey(options.scope, options.identifier);
   const windowStart = new Date(now.getTime() - options.windowMs);
   const expiresAt = new Date(now.getTime() + options.windowMs + 60_000);
+  const blockUntil = new Date(
+    now.getTime() + (options.blockDurationMs ?? options.windowMs)
+  );
 
   const existing = await collection.findOne({ keyHash, scope: options.scope });
 
@@ -56,68 +59,73 @@ export async function consumeRateLimit(
     };
   }
 
-  if (
-    !existing ||
-    existing.windowStartedAt < windowStart ||
-    (existing.blockedUntil && existing.blockedUntil <= now)
-  ) {
+  const inActiveWindow =
+    existing &&
+    existing.windowStartedAt >= windowStart &&
+    (!existing.blockedUntil || existing.blockedUntil <= now);
+
+  if (inActiveWindow) {
+    const updated = await collection.findOneAndUpdate(
+      {
+        _id: existing._id,
+        requestCount: { $lt: options.maxRequests },
+        windowStartedAt: { $gte: windowStart },
+      },
+      {
+        $inc: { requestCount: 1 },
+        $set: { expiresAt, updatedAt: now },
+        $unset: { blockedUntil: "" },
+      },
+      { returnDocument: "after" }
+    );
+
+    if (updated) {
+      return {
+        allowed: true,
+        remaining: Math.max(0, options.maxRequests - updated.requestCount),
+      };
+    }
+
     await collection.updateOne(
-      { keyHash, scope: options.scope },
+      { _id: existing._id },
       {
         $set: {
-          keyHash,
-          scope: options.scope,
-          windowStartedAt: now,
-          requestCount: 1,
-          blockedUntil: undefined,
+          blockedUntil: blockUntil,
           expiresAt,
           updatedAt: now,
         },
-        $setOnInsert: {
-          createdAt: now,
-        },
-      },
-      { upsert: true }
+      }
     );
 
     return {
-      allowed: true,
-      remaining: Math.max(0, options.maxRequests - 1),
+      allowed: false,
+      remaining: 0,
+      retryAfter: blockUntil,
     };
   }
 
-  const nextCount = existing.requestCount + 1;
-  const blockedUntil =
-    nextCount > options.maxRequests
-      ? new Date(
-          now.getTime() +
-            (options.blockDurationMs ?? options.windowMs)
-        )
-      : undefined;
-
   await collection.updateOne(
-    { _id: existing._id },
+    { keyHash, scope: options.scope },
     {
       $set: {
-        requestCount: nextCount,
-        blockedUntil,
+        keyHash,
+        scope: options.scope,
+        windowStartedAt: now,
+        requestCount: 1,
         expiresAt,
         updatedAt: now,
       },
-    }
+      $unset: { blockedUntil: "" },
+      $setOnInsert: {
+        createdAt: now,
+      },
+    },
+    { upsert: true }
   );
-
-  if (blockedUntil) {
-    return {
-      allowed: false,
-      remaining: 0,
-      retryAfter: blockedUntil,
-    };
-  }
 
   return {
     allowed: true,
-    remaining: Math.max(0, options.maxRequests - nextCount),
+    remaining: Math.max(0, options.maxRequests - 1),
   };
 }
 

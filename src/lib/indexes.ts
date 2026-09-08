@@ -251,4 +251,21 @@ export async function ensureIndexes(): Promise<void> {
       name: "rateLimitRecords_expiresAt_ttl",
     },
   ]);
+
+  await db.collection(COLLECTIONS.aiAgents).createIndexes([
+    {
+      key: { apiKeyHash: 1 },
+      unique: true,
+      name: "aiAgents_apiKeyHash_unique",
+    },
+    {
+      key: { isActive: 1, createdAt: -1 },
+      name: "aiAgents_isActive_createdAt",
+    },
+    {
+      key: { expiresAt: 1 },
+      name: "aiAgents_expiresAt",
+      sparse: true,
+    },
+  ]);
 }

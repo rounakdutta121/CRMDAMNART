@@ -28,7 +28,8 @@ export type SourceSystem =
   | "n8n"
   | "apps_script"
   | "manual"
-  | "import";
+  | "import"
+  | "agent";
 
 export type ConsentStatus = "granted" | "denied" | "unknown";
 

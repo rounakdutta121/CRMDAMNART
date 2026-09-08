@@ -7,7 +7,10 @@ export type AuditEntityType =
   | "lead"
   | "follow_up"
   | "integration"
-  | "dashboard_share";
+  | "dashboard_share"
+  | "ai_agent"
+  | "form"
+  | "service";
 
 export interface AuditLog {
   _id: ObjectId;

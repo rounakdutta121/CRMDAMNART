@@ -59,6 +59,7 @@ import {
 } from "@/services/forms.service";
 import {
   createServiceForUser,
+  deleteServiceForUser,
   updateServiceForUser,
 } from "@/services/services.service";
 import {
@@ -160,18 +161,15 @@ export async function createWebsiteAction(
 
     const result = await createWebsiteForUser(user, parsed.data);
     revalidatePath("/websites");
-    redirect(
-      `/websites/${result.website._id.toHexString()}?apiKey=${encodeURIComponent(result.apiKey)}`
-    );
+    return {
+      success: true,
+      message: "Website created. Copy the API key now — it will not be shown again.",
+      data: {
+        websiteId: result.website._id.toHexString(),
+        apiKey: result.apiKey,
+      },
+    };
   } catch (error) {
-    if (
-      error &&
-      typeof error === "object" &&
-      "digest" in error &&
-      String((error as { digest?: string }).digest).startsWith("NEXT_REDIRECT")
-    ) {
-      throw error;
-    }
     return toActionError(error);
   }
 }
@@ -240,7 +238,10 @@ export async function deleteWebsiteAction(
     await deleteWebsiteForUser(user, websiteId);
     revalidatePath("/websites");
     revalidatePath(`/websites/${websiteId}`);
-    return { success: true, message: "Website deleted." };
+    return {
+      success: true,
+      message: "Website permanently deleted from the database.",
+    };
   } catch (error) {
     return toActionError(error);
   }
@@ -814,6 +815,21 @@ export async function renameServiceAction(
     revalidatePath(`/settings/services/${serviceId}`);
     revalidatePath(`/settings/services/${serviceId}/edit`);
     return { success: true, message: "Service renamed." };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
+export async function deleteServiceAction(
+  serviceId: string
+): Promise<ActionResult> {
+  try {
+    const user = await requireSession();
+    await deleteServiceForUser(user, serviceId);
+    revalidatePath("/settings/services");
+    revalidatePath(`/settings/services/${serviceId}`);
+    revalidatePath(`/settings/services/${serviceId}/edit`);
+    return { success: true, message: "Service deleted." };
   } catch (error) {
     return toActionError(error);
   }
@@ -1539,6 +1555,128 @@ export async function verifyDashboardSharePasswordAction(
 
     return { success: true, message: "Access granted." };
   } catch (error) {
+    return toActionError(error);
+  }
+}
+
+export async function createAiAgentAction(
+  _prev: ActionResult | undefined,
+  formData: FormData
+): Promise<ActionResult> {
+  try {
+    const user = await requireSession();
+    const { createAiAgentSchema } = await import(
+      "@/lib/validation/ai-agent.schema"
+    );
+    const { createAiAgentForAdmin } = await import("@/services/agents.service");
+    const parsed = createAiAgentSchema.safeParse({
+      name: formData.get("name"),
+      description: formData.get("description") || undefined,
+      scopes: parseStringArray(formData, "scopes"),
+      permittedWebsiteIds: parseStringArray(formData, "permittedWebsiteIds"),
+      expiresAt: formData.get("expiresAt") || undefined,
+    });
+
+    if (!parsed.success) {
+      return {
+        success: false,
+        message: parsed.error.issues[0]?.message ?? "Validation failed.",
+      };
+    }
+
+    const result = await createAiAgentForAdmin(user, parsed.data);
+    revalidatePath("/settings/ai-agents");
+    return {
+      success: true,
+      message: "AI agent created. Copy the API key now — it will not be shown again.",
+      data: {
+        agentId: result.agent._id.toHexString(),
+        apiKey: result.apiKey,
+        keyPrefix: result.agent.keyPrefix,
+      },
+    };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
+export async function updateAiAgentAction(
+  agentId: string,
+  _prev: ActionResult | undefined,
+  formData: FormData
+): Promise<ActionResult> {
+  try {
+    const user = await requireSession();
+    const { updateAiAgentSchema } = await import(
+      "@/lib/validation/ai-agent.schema"
+    );
+    const { updateAiAgentForAdmin } = await import("@/services/agents.service");
+    const parsed = updateAiAgentSchema.safeParse({
+      name: formData.get("name") || undefined,
+      description: formData.get("description") ?? undefined,
+      scopes: parseStringArray(formData, "scopes"),
+      permittedWebsiteIds: parseStringArray(formData, "permittedWebsiteIds"),
+      isActive: formData.get("isActive") === "true",
+    });
+
+    if (!parsed.success) {
+      return {
+        success: false,
+        message: parsed.error.issues[0]?.message ?? "Validation failed.",
+      };
+    }
+
+    await updateAiAgentForAdmin(user, agentId, parsed.data);
+    revalidatePath("/settings/ai-agents");
+    revalidatePath(`/settings/ai-agents/${agentId}`);
+    return { success: true, message: "AI agent updated." };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
+export async function rotateAiAgentKeyAction(
+  agentId: string
+): Promise<ActionResult> {
+  try {
+    const user = await requireSession();
+    const { rotateAiAgentKeyForAdmin } = await import(
+      "@/services/agents.service"
+    );
+    const result = await rotateAiAgentKeyForAdmin(user, agentId);
+    revalidatePath("/settings/ai-agents");
+    revalidatePath(`/settings/ai-agents/${agentId}`);
+    return {
+      success: true,
+      message: "API key rotated. Copy the new key now.",
+      data: {
+        apiKey: result.apiKey,
+        keyPrefix: result.agent.keyPrefix,
+      },
+    };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
+export async function deleteAiAgentAction(
+  agentId: string
+): Promise<ActionResult> {
+  try {
+    const user = await requireSession();
+    const { deleteAiAgentForAdmin } = await import("@/services/agents.service");
+    await deleteAiAgentForAdmin(user, agentId);
+    revalidatePath("/settings/ai-agents");
+    redirect("/settings/ai-agents");
+  } catch (error) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "digest" in error &&
+      String((error as { digest?: string }).digest).startsWith("NEXT_REDIRECT")
+    ) {
+      throw error;
+    }
     return toActionError(error);
   }
 }

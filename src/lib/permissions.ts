@@ -22,6 +22,10 @@ export function canManageIntegrations(role: UserRole): boolean {
   return role === "super_admin" || role === "admin";
 }
 
+export function canManageAiAgents(role: UserRole): boolean {
+  return role === "super_admin" || role === "admin";
+}
+
 export function canManageForms(role: UserRole): boolean {
   return role === "super_admin" || role === "admin";
 }

@@ -1,8 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { createWebsiteAction, type ActionResult } from "@/app/actions";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
+import { CopyButton } from "@/components/shared/copy-button";
 import { GlobalLoadingSync } from "@/components/shared/global-loading";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
@@ -14,6 +16,44 @@ const initial: ActionResult = { success: false, message: "" };
 
 export default function NewWebsitePage() {
   const [state, action, pending] = useActionState(createWebsiteAction, initial);
+
+  const apiKey =
+    state.success && state.data?.apiKey ? String(state.data.apiKey) : null;
+  const websiteId =
+    state.success && state.data?.websiteId
+      ? String(state.data.websiteId)
+      : null;
+
+  if (apiKey && websiteId) {
+    return (
+      <div>
+        <Breadcrumbs
+          items={[
+            { label: "Websites", href: "/websites" },
+            { label: "New website" },
+          ]}
+        />
+        <PageHeader
+          title="Website created"
+          description="Copy the webhook API key now — it will not be shown again."
+        />
+        <Card className="max-w-2xl border-amber-300 bg-amber-50">
+          <CardContent className="space-y-4 pt-6">
+            <p className="text-sm text-amber-950">{state.message}</p>
+            <code className="block break-all rounded border border-amber-200 bg-white p-3 text-sm text-amber-950">
+              {apiKey}
+            </code>
+            <div className="flex flex-wrap gap-2">
+              <CopyButton value={apiKey} label="Copy API key" />
+              <Button asChild>
+                <Link href={`/websites/${websiteId}`}>Continue to website</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div>

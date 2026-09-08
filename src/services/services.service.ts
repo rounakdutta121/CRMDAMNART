@@ -3,6 +3,8 @@ import { writeAuditLog } from "@/lib/audit";
 import { normalizeWebsiteCode } from "@/lib/normalization";
 import {
   assertCanAccessWebsite,
+  canAccessAllWebsites,
+  canAccessWebsite,
   canManageServices,
   PermissionError,
 } from "@/lib/permissions";
@@ -12,6 +14,7 @@ import type {
 } from "@/lib/validation/service.schema";
 import {
   createService,
+  deleteServiceById,
   findServiceByCode,
   findServiceById,
   listServices,
@@ -20,6 +23,18 @@ import {
 } from "@/repositories/services.repository";
 import type { SessionUser } from "@/types/auth";
 import type { CRMService } from "@/types/service";
+
+function assertCanAccessService(user: SessionUser, service: CRMService): void {
+  if (canAccessAllWebsites(user.role)) {
+    return;
+  }
+  const hasAccess = service.websiteIds.some((websiteId) =>
+    canAccessWebsite(user, websiteId.toHexString())
+  );
+  if (!hasAccess) {
+    throw new PermissionError("You do not have access to this service.");
+  }
+}
 
 export async function getServicesForUser(
   user: SessionUser,
@@ -36,7 +51,16 @@ export async function getServicesForUser(
     });
   }
 
-  return listServices({ isActive: options?.isActive });
+  const services = await listServices({ isActive: options?.isActive });
+  if (canAccessAllWebsites(user.role)) {
+    return services;
+  }
+
+  return services.filter((service) =>
+    service.websiteIds.some((websiteId) =>
+      canAccessWebsite(user, websiteId.toHexString())
+    )
+  );
 }
 
 export async function getServiceForUser(
@@ -52,16 +76,7 @@ export async function getServiceForUser(
     throw new Error("Service not found.");
   }
 
-  const hasAccess = service.websiteIds.some((websiteId) =>
-    user.role === "super_admin"
-      ? true
-      : user.permittedWebsiteIds.includes(websiteId.toHexString())
-  );
-
-  if (!hasAccess) {
-    throw new PermissionError("You do not have access to this service.");
-  }
-
+  assertCanAccessService(user, service);
   return service;
 }
 
@@ -129,6 +144,8 @@ export async function updateServiceForUser(
     throw new Error("Service not found.");
   }
 
+  assertCanAccessService(user, existing);
+
   if (input.websiteIds) {
     for (const websiteId of input.websiteIds) {
       assertCanAccessWebsite(user, websiteId);
@@ -187,4 +204,47 @@ export async function deactivateServiceForUser(
   serviceId: string
 ): Promise<CRMService> {
   return updateServiceForUser(user, serviceId, { isActive: false });
+}
+
+export async function deleteServiceForUser(
+  user: SessionUser,
+  serviceId: string
+): Promise<void> {
+  if (!canManageServices(user.role)) {
+    throw new PermissionError("You are not allowed to delete services.");
+  }
+
+  const existing = await findServiceById(serviceId);
+  if (!existing) {
+    throw new Error("Service not found.");
+  }
+
+  assertCanAccessService(user, existing);
+
+  const deleted = await deleteServiceById(serviceId);
+  if (!deleted) {
+    throw new Error("Service not found.");
+  }
+
+  // Clear form defaults that pointed at this service.
+  const { getDb } = await import("@/lib/mongodb");
+  const { COLLECTIONS } = await import("@/lib/constants");
+  const db = await getDb();
+  await db.collection(COLLECTIONS.websiteForms).updateMany(
+    { defaultServiceId: existing._id },
+    { $unset: { defaultServiceId: "" }, $set: { updatedAt: new Date() } }
+  );
+
+  await writeAuditLog({
+    actingUserId: user.id,
+    action: "service.deleted",
+    entityType: "service",
+    entityId: serviceId,
+    previousValues: {
+      name: existing.name,
+      code: existing.code,
+      websiteIds: existing.websiteIds.map((id) => id.toHexString()),
+      isActive: existing.isActive,
+    },
+  });
 }

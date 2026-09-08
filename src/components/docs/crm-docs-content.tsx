@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArchivePanel, ReportSection } from "@/components/shared/archive";
+import { AiAgentsApiDocs } from "@/components/docs/ai-agents-api-docs";
 
 export const DOC_MODULES = [
   { id: "getting-started", label: "Getting started", number: "00" },
@@ -11,8 +12,9 @@ export const DOC_MODULES = [
   { id: "services", label: "Services", number: "06" },
   { id: "users", label: "Users & invitations", number: "07" },
   { id: "integrations", label: "Integrations", number: "08" },
-  { id: "reference", label: "Reference", number: "09" },
-  { id: "permissions", label: "Who can do what", number: "10" },
+  { id: "ai-agents", label: "AI Agents API", number: "09" },
+  { id: "reference", label: "Reference", number: "10" },
+  { id: "permissions", label: "Who can do what", number: "11" },
 ] as const;
 
 function DocLink({ href, children }: { href: string; children: React.ReactNode }) {
@@ -570,7 +572,13 @@ export function CrmDocsContent() {
       </ArchivePanel>
 
       <ArchivePanel>
-        <ReportSection number="09 / Reference" title="Roles & lead statuses">
+        <ReportSection number="09 / Agents" title="AI Agents API">
+          <AiAgentsApiDocs />
+        </ReportSection>
+      </ArchivePanel>
+
+      <ArchivePanel>
+        <ReportSection number="10 / Reference" title="Roles & lead statuses">
           <div id="reference" className="scroll-mt-24 space-y-4">
             <FeatureBlock title="Roles">
               <p>
@@ -594,7 +602,7 @@ export function CrmDocsContent() {
       </ArchivePanel>
 
       <ArchivePanel>
-        <ReportSection number="10 / Permissions" title="Who can do what">
+        <ReportSection number="11 / Permissions" title="Who can do what">
           <div id="permissions" className="scroll-mt-24 space-y-4">
             <FeatureBlock title="Quick matrix">
               <div className="ledger-scroll">

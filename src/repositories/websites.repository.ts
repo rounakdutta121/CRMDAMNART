@@ -90,6 +90,14 @@ export async function regenerateWebsiteApiKey(
   );
 }
 
+export async function deleteWebsiteById(id: string): Promise<boolean> {
+  const db = await getDb();
+  const result = await db.collection<Website>(COLLECTIONS.websites).deleteOne({
+    _id: new ObjectId(id),
+  });
+  return result.deletedCount === 1;
+}
+
 export function toSafeWebsite(website: Website): SafeWebsite {
   return omitFields(website, ["apiKeyHash"]);
 }

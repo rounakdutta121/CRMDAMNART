@@ -9,14 +9,18 @@ import {
   normalizeWebsiteCode,
 } from "@/lib/normalization";
 import { writeAuditLog } from "@/lib/audit";
+import { COLLECTIONS } from "@/lib/constants";
+import { getDb } from "@/lib/mongodb";
 import {
   canAccessWebsite,
   canManageWebsites,
   PermissionError,
 } from "@/lib/permissions";
 import type { CreateWebsiteInput, UpdateWebsiteInput } from "@/lib/validation/website.schema";
+import { countLeads } from "@/repositories/leads.repository";
 import {
   createWebsite,
+  deleteWebsiteById,
   findWebsiteByCode,
   findWebsiteById,
   listWebsites,
@@ -208,11 +212,51 @@ export async function deleteWebsiteForUser(
     throw new Error("Website not found.");
   }
 
-  if (!existing.isActive) {
-    return;
+  const leadCount = await countLeads({ websiteId });
+  if (leadCount > 0) {
+    throw new Error(
+      `Cannot permanently delete this website while it still has ${leadCount} lead(s). Reassign or delete those leads first, or deactivate the website instead.`
+    );
   }
 
-  await updateWebsite(websiteId, { isActive: false });
+  const websiteObjectId = existing._id;
+  const db = await getDb();
+
+  const now = new Date();
+  await Promise.all([
+    db.collection(COLLECTIONS.websiteForms).deleteMany({
+      websiteId: websiteObjectId,
+    }),
+    db.collection(COLLECTIONS.dashboardShares).deleteMany({
+      websiteId: websiteObjectId,
+    }),
+    db.collection(COLLECTIONS.services).updateMany(
+      { websiteIds: websiteObjectId },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { $pull: { websiteIds: websiteObjectId }, $set: { updatedAt: now } } as any
+    ),
+    db.collection(COLLECTIONS.users).updateMany(
+      { permittedWebsiteIds: websiteObjectId },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      {
+        $pull: { permittedWebsiteIds: websiteObjectId },
+        $set: { updatedAt: now },
+      } as any
+    ),
+    db.collection(COLLECTIONS.aiAgents).updateMany(
+      { permittedWebsiteIds: websiteObjectId },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      {
+        $pull: { permittedWebsiteIds: websiteObjectId },
+        $set: { updatedAt: now },
+      } as any
+    ),
+  ]);
+
+  const deleted = await deleteWebsiteById(websiteId);
+  if (!deleted) {
+    throw new Error("Website not found.");
+  }
 
   await writeAuditLog({
     actingUserId: user.id,
@@ -220,8 +264,12 @@ export async function deleteWebsiteForUser(
     entityType: "website",
     entityId: websiteId,
     websiteId,
-    previousValues: { isActive: existing.isActive, name: existing.name },
-    newValues: { isActive: false },
+    previousValues: {
+      name: existing.name,
+      code: existing.code,
+      isActive: existing.isActive,
+    },
+    newValues: { permanentlyDeleted: true },
   });
 }
 

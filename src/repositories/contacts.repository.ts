@@ -7,6 +7,14 @@ const ACTIVE_CONTACT_FILTER: Filter<Contact> = {
   $or: [{ isMerged: { $exists: false } }, { isMerged: false }],
 };
 
+/** Real people only — exclude WhatsApp/button-click trackers with no email/phone. */
+const HAS_REACHABLE_IDENTITY_FILTER: Filter<Contact> = {
+  $or: [
+    { normalizedEmail: { $exists: true, $type: "string", $gt: "" } },
+    { normalizedPhone: { $exists: true, $type: "string", $gt: "" } },
+  ],
+};
+
 export async function findContactById(id: string): Promise<Contact | null> {
   const db = await getDb();
   return db
@@ -122,9 +130,20 @@ export async function findContactsExcludingMerged(options: {
   search?: string;
   skip: number;
   limit: number;
+  contactIds?: ObjectId[];
 }): Promise<{ items: Contact[]; total: number }> {
   const db = await getDb();
-  const conditions: Filter<Contact>[] = [ACTIVE_CONTACT_FILTER];
+  const conditions: Filter<Contact>[] = [
+    ACTIVE_CONTACT_FILTER,
+    HAS_REACHABLE_IDENTITY_FILTER,
+  ];
+
+  if (options.contactIds) {
+    if (options.contactIds.length === 0) {
+      return { items: [], total: 0 };
+    }
+    conditions.push({ _id: { $in: options.contactIds } });
+  }
 
   if (options.search) {
     const regex = new RegExp(
@@ -143,8 +162,7 @@ export async function findContactsExcludingMerged(options: {
     });
   }
 
-  const filter: Filter<Contact> =
-    conditions.length === 1 ? conditions[0]! : { $and: conditions };
+  const filter: Filter<Contact> = { $and: conditions };
 
   const [items, total] = await Promise.all([
     db
@@ -250,28 +268,40 @@ export async function listContacts(options: {
   skip: number;
   limit: number;
   includeMerged?: boolean;
+  contactIds?: ObjectId[];
 }): Promise<{ items: Contact[]; total: number }> {
   if (!options.includeMerged) {
     return findContactsExcludingMerged(options);
   }
 
   const db = await getDb();
-  const filter: Filter<Contact> = {};
+  const conditions: Filter<Contact>[] = [HAS_REACHABLE_IDENTITY_FILTER];
+
+  if (options.contactIds) {
+    if (options.contactIds.length === 0) {
+      return { items: [], total: 0 };
+    }
+    conditions.push({ _id: { $in: options.contactIds } });
+  }
 
   if (options.search) {
     const regex = new RegExp(
       options.search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
       "i"
     );
-    filter.$or = [
-      { name: regex },
-      { email: regex },
-      { phone: regex },
-      { company: regex },
-      { searchName: regex },
-      { searchCompany: regex },
-    ];
+    conditions.push({
+      $or: [
+        { name: regex },
+        { email: regex },
+        { phone: regex },
+        { company: regex },
+        { searchName: regex },
+        { searchCompany: regex },
+      ],
+    });
   }
+
+  const filter: Filter<Contact> = { $and: conditions };
 
   const [items, total] = await Promise.all([
     db

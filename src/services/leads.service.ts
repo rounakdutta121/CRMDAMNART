@@ -78,6 +78,7 @@ import type {
   Lead,
   LeadPriority,
   LeadStatus,
+  SourceSystem,
 } from "@/types/lead";
 import type { SafeWebsite } from "@/types/website";
 import type { SafeCRMUser } from "@/types/auth";
@@ -464,7 +465,8 @@ export async function getLeadDetail(
 
 export async function createManualLead(
   user: SessionUser,
-  input: CreateManualLeadInput
+  input: CreateManualLeadInput,
+  options?: { sourceSystem?: SourceSystem }
 ): Promise<Lead> {
   if (!canCreateManualLeads(user.role)) {
     throw new PermissionError("You are not allowed to create leads.");
@@ -476,6 +478,8 @@ export async function createManualLead(
   if (!website) {
     throw new Error("Website not found.");
   }
+
+  const sourceSystem = options?.sourceSystem ?? "manual";
 
   const { contact } = await findOrCreateContact({
     name: input.name,
@@ -499,7 +503,7 @@ export async function createManualLead(
     contactId: contact._id,
     websiteId: website._id,
     formName: normalizeOptionalString(input.formName),
-    sourceSystem: "manual",
+    sourceSystem,
     service: input.service.trim(),
     message: normalizeOptionalString(input.message),
     assignedUserId,
@@ -515,7 +519,10 @@ export async function createManualLead(
     contactId: contact._id,
     websiteId: website._id,
     type: "lead_created",
-    description: "Lead created manually.",
+    description:
+      sourceSystem === "agent"
+        ? "Lead created by AI agent."
+        : "Lead created manually.",
     createdByUserId: new ObjectId(user.id),
     createdAt: now,
   });
@@ -527,14 +534,16 @@ export async function createManualLead(
     websiteName: website.name,
     formName: lead.formName,
     contactName: contact.name,
-    sourceSystem: "manual",
+    sourceSystem,
     assignedUserId: lead.assignedUserId,
     excludeUserId: new ObjectId(user.id),
   });
 
   await writeAuditLog({
     actingUserId: user.id,
-    action: "lead.created_manual",
+    actingSystem: sourceSystem === "agent" ? `ai_agent:${user.id}` : undefined,
+    action:
+      sourceSystem === "agent" ? "lead.created_agent" : "lead.created_manual",
     entityType: "lead",
     entityId: lead._id,
     websiteId: website._id,
@@ -542,6 +551,7 @@ export async function createManualLead(
       leadNumber: lead.leadNumber,
       status: lead.status,
       service: lead.service,
+      sourceSystem,
     },
   });
 
